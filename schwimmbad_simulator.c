@@ -29,13 +29,29 @@ int autoParkplatz = 0;
 int fussgaengerJa = 0;
 int fussgaengerGesamt = 0;
 
+/* Struktur für einen Badegast */
+typedef struct Badegast{
+	int ankunftsZeit;
+	int ankunftsTyp;		/* 0 = Bus, 1 = Auto, 2 = Fußgänger */
+	int kartenTyp;			/* 0 = 2h, 1 = 1h verl., 2 = 2h verl., 3 = Tageskarte */
+	/* Weitere Eigenschaften für einen Badegast hier eintragen */
+	
+	
+	struct Badegast *folgender;
+} Badegast;
+
+Badegast *anfang = NULL;
+
 /* Funktionsdeklarationen */
 void simulation();
 void anreise(int simMinute);
 void busAnreise(int simMinute);
 void autoAnreise(int simMinute);
 void zuFussAnreise(int simMinute);
-void badegastHinzufuegen(int simMinute);
+void badegaesteEinlass(int simMinute);
+void badegastHinzufuegen(int simMinute, int ankunftsTyp);
+int badegaesteDurchsuchen();
+void badegaesteFreilassen();
 int zufallszahl(int maximum);
 void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit);
 void ausgabeVerarbeitung(int simMinute);
@@ -74,8 +90,8 @@ void simulation() {
 			
 			
 			
-			/* Fügt einen angereisten Badegast der Liste der Badegäste hinzu */
-			badegastHinzufuegen(simMinute);
+			/* Lässt die Badegäste einzeln ins Schwimmbad */
+			badegaesteEinlass(simMinute);
 			
 			/* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 			
@@ -105,6 +121,7 @@ void simulation() {
 		/* Steuert die Simulationsgeschwindigkeit */
 		Sleep(simGeschwindigkeit);
 	}
+	badegaesteFreilassen();
 }
 
 /* Funktion Simuliert die Anreise der Badegäste */
@@ -189,18 +206,71 @@ void zuFussAnreise(int simMinute){
 }
 
 /* Funktion fügt die angereisten Personen den Badegästen hinzu */
-void badegastHinzufuegen(int simMinute) {
+void badegaesteEinlass(int simMinute) {
 	for(; busFahrgaeste > 0; busFahrgaeste--) {
-		badegaesteGesamtMenge++;
-		badegaesteAktuelleMenge++;
+		badegastHinzufuegen(simMinute, 0);
 	}	
 	for(; autoBelegung > 0; autoBelegung--) {
-		badegaesteGesamtMenge++;
-		badegaesteAktuelleMenge++;
+		badegastHinzufuegen(simMinute, 1);
 	}
 	for(; fussgaengerJa > 0; fussgaengerJa--) {
-		badegaesteGesamtMenge++;
-		badegaesteAktuelleMenge++;
+		badegastHinzufuegen(simMinute, 2);
+	}
+}
+
+/* Funktion fügt die eingelassenen Badegäste zur Liste der Badegäste hinzu */
+void badegastHinzufuegen(int simMinute, int ankunftsTyp) {
+	Badegast* zeiger = anfang;
+	
+	/* Reserviert Speicher für einen neuen Badegasteintrag */
+	Badegast* neuerBadegast = (Badegast*)malloc(sizeof(Badegast));
+	
+	/* Übergibt die Startwerte dem Badegasteintrag */
+	neuerBadegast->ankunftsZeit = simMinute;
+	neuerBadegast->ankunftsTyp = ankunftsTyp;
+	neuerBadegast->kartenTyp = 0; /* Noch leer, gilt nur zu Testzwecken */
+	neuerBadegast->folgender = NULL;
+	
+	/* Hängt den Badegast ans Ende der Liste */
+	if(anfang == NULL) {
+		anfang = neuerBadegast;
+	}
+	else {
+		while(zeiger->folgender != NULL) {
+			zeiger = zeiger->folgender;
+		}
+		zeiger->folgender = neuerBadegast;
+	}
+	
+	/* Erhöht die Zähler für die aktuelle Auslastung und die Gesamtgästemenge */
+	badegaesteGesamtMenge++;
+	badegaesteAktuelleMenge++;
+}
+
+/* Funktion zum Durchsuchen der Liste nach bestimmten Parametern */
+/* Aktuell wird aus Testzwecken nur die länge der Liste zurückgegeben */
+int badegaesteDurchsuchen() {
+	Badegast* zeiger = anfang;
+	Badegast* folgezeiger = NULL;
+	int i = 0;
+	
+	while(zeiger != NULL) {
+	folgezeiger = zeiger->folgender;
+	i++;
+	zeiger = folgezeiger;
+	}
+	return i;
+}
+
+/* Funktion gibt den kompletten reservierten Speicher wieder frei */
+void badegaesteFreilassen() {
+	Badegast* zeiger = anfang;
+	Badegast* folgezeiger = NULL;
+	
+	while(zeiger != NULL) {
+		folgezeiger = zeiger->folgender;
+		free(zeiger);
+		zeiger = folgezeiger;
 	}
 }
 
@@ -307,6 +377,7 @@ void ausgabeVerarbeitung(int simMinute) {
 	}
 	
 	printf("\nPersonen im Schwimmbad: %4d", badegaesteGesamtMenge);
+	printf("\nPersonen in der Liste: %5d", badegaesteDurchsuchen());
 	printf("\nPersonen zu Fuss: %10d", fussgaengerGesamt);
 	printf("\n...(T)urbo");
 	printf("\n...(P)ause");
