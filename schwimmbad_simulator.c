@@ -34,6 +34,7 @@ typedef struct Badegast{
 	int ankunftsZeit;
 	int ankunftsTyp;		/* 0 = Bus, 1 = Auto, 2 = Fußgänger */
 	int kartenTyp;			/* 0 = 2h, 1 = 1h verl., 2 = 2h verl., 3 = Tageskarte */
+	int ereignisTyp;		/* 0 = Frei, 1 = Liege, 2 = Normal, 3 = Ring */
 	/* Weitere Eigenschaften für einen Badegast hier eintragen */
 	
 	
@@ -100,7 +101,7 @@ void simulation() {
 				/* ------------------------------------------------------------------------ */
 				/* Hier werden die Funktionen aufgerufen die jede Sekunde ausgeführt werden */
 			
-		
+			
 			
 			
 			
@@ -228,7 +229,8 @@ void badegastHinzufuegen(int simMinute, int ankunftsTyp) {
 	/* Übergibt die Startwerte dem Badegasteintrag */
 	neuerBadegast->ankunftsZeit = simMinute;
 	neuerBadegast->ankunftsTyp = ankunftsTyp;
-	neuerBadegast->kartenTyp = 0; /* Noch leer, gilt nur zu Testzwecken */
+	neuerBadegast->kartenTyp = 0;
+	neuerBadegast->ereignisTyp = 0;
 	neuerBadegast->folgender = NULL;
 	
 	/* Hängt den Badegast ans Ende der Liste */
@@ -247,8 +249,9 @@ void badegastHinzufuegen(int simMinute, int ankunftsTyp) {
 	badegaesteAktuelleMenge++;
 }
 
-/* Funktion zum Durchsuchen der Liste nach bestimmten Parametern */
-/* Aktuell wird aus Testzwecken nur die länge der Liste zurückgegeben */
+/* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
+/*       Funktion ist nur ein Beispiel und gilt zu Testzwecken       */
+/* Es wird geprüft ob alle Badegäste in die Liste eingetragen wurden */
 int badegaesteDurchsuchen() {
 	Badegast* zeiger = anfang;
 	Badegast* folgezeiger = NULL;
@@ -336,27 +339,27 @@ void ausgabeVerarbeitung(int simMinute) {
 	
 	printf("Schwimmbad Wasserwesen");
 	printf("\n\n2-Stunden-Karten: %10d", 0);
-	printf("%*sRutschen", 23, "");
+	printf("%*sRutschen", 30, "");
 	printf("\n1 Stunde verlaengert: %6d", 0);
 	printf("\n2 Stunden verlaengert: %5d", 0);
 	printf("%*snormal", 8, "");
-	printf("%*sSchwimmring", 19, "");
+	printf("%*sSchwimmring", 26, "");
 	printf("\nTageskarten: %15d", 0);
-	printf("%*sauf Treppe: %4d", 8, "", 0);
-	printf("%*sauf Treppe: %*s%3d", 9, "", 7, "", 0);
+	printf("%*sauf Treppe: %3d", 8, "", 0);
+	printf("%*sauf Treppe: %*s%3d", 17, "", 7, "", 0);
 	printf("\nRutschennutzungen: %9d", 0);
-	printf("%*sRinge im Automaten: %2d", 33, "", 0);
+	printf("%*sRinge im Automaten: %2d", 40, "", 0);
 	printf("\n\nBistro: %2d/20", 0);
 	printf("\nLiegen: %2d/80", 0);
-	printf("%*sBecken", 38, "");
+	printf("%*sBecken", 46, "");
 	printf("\n\n(H): %2d", 0);
 	printf("%*sKinder", 29, "");
-	printf("%*sSchwimmer", 8, "");
-	printf("%*sAussen", 8, "");
+	printf("%*sSchwimmer", 16, "");
+	printf("%*sAussen", 17, "");
 	printf("\n[P]: %2d", autoParkplatz);
 	printf("%*s%3d", 32, "", 0);	/* Kinder */
-	printf("%*s%3d", 14, "", 0);	/* Schwimmer */
-	printf("%*s%3d", 11, "", 0);	/* Außen */
+	printf("%*s%3d", 22, "", 0);	/* Schwimmer */
+	printf("%*s%3d", 20, "", 0);	/* Außen */
 	
 	/* Zeigt die simulierte Stunde an */
 	/* Unter 10 Stunden wird eine 0 ergänzt */
@@ -378,7 +381,6 @@ void ausgabeVerarbeitung(int simMinute) {
 	
 	printf("\nPersonen im Schwimmbad: %4d", badegaesteGesamtMenge);
 	printf("\nPersonen in der Liste: %5d", badegaesteDurchsuchen());
-	printf("\nPersonen zu Fuss: %10d", fussgaengerGesamt);
 	printf("\n...(T)urbo");
 	printf("\n...(P)ause");
 }
