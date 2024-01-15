@@ -43,6 +43,7 @@ typedef struct Badegast{
 	struct Badegast *danach;
 } Badegast;
 
+/* Zeiger für doppelt verkettete Liste */
 Badegast *badegastAnfang = NULL;
 Badegast *badegastEnde = NULL;
 Badegast *badegastAktuell = NULL;
@@ -76,7 +77,7 @@ void simulation() {
 	int simSekunde;
 	
 	/* Schleifeninhalt wird jede simulierte Minute aufgerufen (entsprechend 1 Realsekunde) */
-	/* i = 50 lässt die Simulation 09:50 starten für den ersten Bus */
+	/* simMinute = 50 lässt die Simulation 09:50 starten für den ersten Bus */
 	for(simMinute = 50; simMinute < simZeit; simMinute++) {
 		
 		/* Ruft die anreise-Funktion auf */
@@ -135,7 +136,7 @@ void anreise(int simMinute) {
 	
 	/* Alle 30 Minuten bringt der Bus neue Badegäste */
 	/* Erster Bus 9:50 Uhr, letzter Bus 19:10 Uhr */
-	if((simMinute - 20) % 30 == 0 && simMinute < 611) {
+	if(((simMinute - 20) % 30 == 0 && simMinute < 611) || simMinute = 610) {
 		/* Der Bus bringt nur soviele Gäste, dass die maximale */
 		/* Auslastung des Schwimmbads nicht überschritten werden kann */
 		if(badegaesteAktuelleMenge <= (MAX_AUSLASTUNG - MAX_BUS - MAX_AUTO - 1)) {
