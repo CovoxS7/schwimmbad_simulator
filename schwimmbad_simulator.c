@@ -31,6 +31,7 @@ int fussgaengerGesamt = 0;
 
 /* Struktur für einen Badegast */
 typedef struct Badegast{
+	int index;
 	int ankunftsZeit;
 	int ankunftsTyp;		/* 0 = Bus, 1 = Auto, 2 = Fußgänger */
 	int kartenTyp;			/* 0 = 2h, 1 = 1h verl., 2 = 2h verl., 3 = Tageskarte */
@@ -38,10 +39,13 @@ typedef struct Badegast{
 	/* Weitere Eigenschaften für einen Badegast hier eintragen */
 	
 	
-	struct Badegast *folgender;
+	struct Badegast *davor;
+	struct Badegast *danach;
 } Badegast;
 
-Badegast *anfang = NULL;
+Badegast *badegastAnfang = NULL;
+Badegast *badegastEnde = NULL;
+Badegast *badegastAktuell = NULL;
 
 /* Funktionsdeklarationen */
 void simulation();
@@ -50,7 +54,7 @@ void busAnreise(int simMinute);
 void autoAnreise(int simMinute);
 void zuFussAnreise(int simMinute);
 void badegaesteEinlass(int simMinute);
-void badegastHinzufuegen(int simMinute, int ankunftsTyp);
+int badegastHinzufuegen(int simMinute, int ankunftsTyp);
 int badegaesteDurchsuchen();
 void badegaesteFreilassen();
 int zufallszahl(int maximum);
@@ -220,61 +224,64 @@ void badegaesteEinlass(int simMinute) {
 }
 
 /* Funktion fügt die eingelassenen Badegäste zur Liste der Badegäste hinzu */
-void badegastHinzufuegen(int simMinute, int ankunftsTyp) {
-	Badegast* zeiger = anfang;
+int badegastHinzufuegen(int simMinute, int ankunftsTyp) {
 	
 	/* Reserviert Speicher für einen neuen Badegasteintrag */
-	Badegast* neuerBadegast = (Badegast*)malloc(sizeof(Badegast));
-	
-	/* Übergibt die Startwerte dem Badegasteintrag */
-	neuerBadegast->ankunftsZeit = simMinute;
-	neuerBadegast->ankunftsTyp = ankunftsTyp;
-	neuerBadegast->kartenTyp = 0;
-	neuerBadegast->ereignisTyp = 0;
-	neuerBadegast->folgender = NULL;
-	
-	/* Hängt den Badegast ans Ende der Liste */
-	if(anfang == NULL) {
-		anfang = neuerBadegast;
-	}
-	else {
-		while(zeiger->folgender != NULL) {
-			zeiger = zeiger->folgender;
-		}
-		zeiger->folgender = neuerBadegast;
+	if(!(badegastAktuell = (Badegast* ) malloc(sizeof(Badegast)))) {
+		/* Hier folgt die Fehlerbehandlung */
+		return 0;
 	}
 	
 	/* Erhöht die Zähler für die aktuelle Auslastung und die Gesamtgästemenge */
 	badegaesteGesamtMenge++;
 	badegaesteAktuelleMenge++;
+	
+	/* Übergibt die Startwerte dem Badegasteintrag */
+	badegastAktuell->index = badegaesteGesamtMenge;
+	badegastAktuell->ankunftsZeit = simMinute;
+	badegastAktuell->ankunftsTyp = ankunftsTyp;
+	badegastAktuell->kartenTyp = 0;
+	badegastAktuell->ereignisTyp = 0;
+	badegastAktuell->davor = badegastEnde;
+	badegastAktuell->danach = NULL;
+	
+	/* Hängt den Badegast ans Ende der Liste */
+	if(badegastAnfang == NULL) {
+		badegastAnfang = badegastAktuell;
+	}
+	else {
+		badegastEnde->danach = badegastAktuell;
+	}
+	badegastEnde = badegastAktuell;
+	
+	return 0;
 }
 
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 /*       Funktion ist nur ein Beispiel und gilt zu Testzwecken       */
 /* Es wird geprüft ob alle Badegäste in die Liste eingetragen wurden */
 int badegaesteDurchsuchen() {
-	Badegast* zeiger = anfang;
-	Badegast* folgezeiger = NULL;
 	int i = 0;
 	
-	while(zeiger != NULL) {
-	folgezeiger = zeiger->folgender;
-	i++;
-	zeiger = folgezeiger;
+	badegastAktuell = badegastAnfang;
+	while(badegastAktuell != NULL) {
+		badegastAktuell = badegastAktuell->danach;
+		i++;
 	}
 	return i;
 }
 
 /* Funktion gibt den kompletten reservierten Speicher wieder frei */
 void badegaesteFreilassen() {
-	Badegast* zeiger = anfang;
-	Badegast* folgezeiger = NULL;
+	badegastAktuell = badegastAnfang->danach;
 	
-	while(zeiger != NULL) {
-		folgezeiger = zeiger->folgender;
-		free(zeiger);
-		zeiger = folgezeiger;
+	while(badegastAktuell != NULL) {
+		badegastAnfang->danach = badegastAktuell->danach;
+		badegastAktuell->danach->davor = badegastAnfang;
+		free(badegastAktuell);
+		badegastAktuell = badegastAnfang->danach;
 	}
+	free(badegastAnfang);
 }
 
 /* Funktion generiert eine Zufallszahl */
