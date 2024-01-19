@@ -28,13 +28,17 @@ int autoBelegung = 0;
 int autoParkplatz = 0;
 int fussgaengerJa = 0;
 int fussgaengerGesamt = 0;
+int zweiStundenkarte = 0;
+int plusEineStunde = 0;
+int plusZweiStunden = 0;
+int tagesKarte = 0;
 
 /* Struktur für einen Badegast */
 typedef struct Badegast{
 	int index;
 	int ankunftsZeit;
 	int ankunftsTyp;		/* 0 = Bus, 1 = Auto, 2 = Fußgänger */
-	int kartenTyp;			/* 0 = 2h, 1 = 1h verl., 2 = 2h verl., 3 = Tageskarte */
+	int kartenTyp;			/* 120 = 2h, 180 = 1h verl., 240 = 2h verl., 300 = Tageskarte */
 	int ereignisTyp;		/* 0 = Frei, 1 = Liege, 2 = Normal, 3 = Ring */
 	/* Weitere Eigenschaften für einen Badegast hier eintragen */
 	
@@ -55,7 +59,9 @@ void busAnreise(int simMinute);
 void autoAnreise(int simMinute);
 void zuFussAnreise(int simMinute);
 void badegaesteEinlass(int simMinute);
-int badegastHinzufuegen(int simMinute, int ankunftsTyp);
+int eintrittskarteKaufen(int menge);
+void eintrittskarteVerlaengern(int simMinute);
+int badegastHinzufuegen(int simMinute, int ankunftsTyp, int kartenTyp);
 int badegaesteDurchsuchen();
 void badegaesteFreilassen();
 int zufallszahl(int maximum);
@@ -99,6 +105,9 @@ void simulation() {
 			/* Lässt die Badegäste einzeln ins Schwimmbad */
 			badegaesteEinlass(simMinute);
 			
+			/* Prüft ob ein Gast seine Eintrittskarte verlängern muss */
+			eintrittskarteVerlaengern(simMinute);
+			
 			/* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 			
 			/* Schleifeninhalt wird jede simulierte Sekunde aufgerufen (entsprechen 1/60 Realsekunden) */
@@ -136,7 +145,7 @@ void anreise(int simMinute) {
 	
 	/* Alle 30 Minuten bringt der Bus neue Badegäste */
 	/* Erster Bus 9:50 Uhr, letzter Bus 19:10 Uhr */
-	if(((simMinute - 20) % 30 == 0 && simMinute < 611) || simMinute = 610) {
+	if(((simMinute - 20) % 30 == 0 && simMinute < 611) || simMinute == 610) {
 		/* Der Bus bringt nur soviele Gäste, dass die maximale */
 		/* Auslastung des Schwimmbads nicht überschritten werden kann */
 		if(badegaesteAktuelleMenge <= (MAX_AUSLASTUNG - MAX_BUS - MAX_AUTO - 1)) {
@@ -213,19 +222,100 @@ void zuFussAnreise(int simMinute){
 
 /* Funktion fügt die angereisten Personen den Badegästen hinzu */
 void badegaesteEinlass(int simMinute) {
+	int kartenTyp;
+	
+	/* Für jeden angereisten Gast wird die badegastHinzufügen Funktion aufgerufen */
+	/* und ihr die Anreisezeit, den Anreisetyp sowie die gekaufte Karte mitgegeben */
+	
+	/* Busgäste erhalten Anreisetyp 0 */
 	for(; busFahrgaeste > 0; busFahrgaeste--) {
-		badegastHinzufuegen(simMinute, 0);
-	}	
-	for(; autoBelegung > 0; autoBelegung--) {
-		badegastHinzufuegen(simMinute, 1);
+		kartenTyp = eintrittskarteKaufen(1);
+		badegastHinzufuegen(simMinute, 0, kartenTyp);
 	}
+	
+	/* Gäste die in einem Auto angereist sind erhalten alle die gleiche Karte und Anreisetyp 1 */
+	if(autoBelegung > 0) {
+		kartenTyp = eintrittskarteKaufen(autoBelegung);
+	}
+	for(; autoBelegung > 0; autoBelegung--) {
+		badegastHinzufuegen(simMinute, 1, kartenTyp);
+	}
+	
+	/* Fussgänger erhalten den Anreisetyp 2 */
 	for(; fussgaengerJa > 0; fussgaengerJa--) {
-		badegastHinzufuegen(simMinute, 2);
+		kartenTyp = eintrittskarteKaufen(1);
+		badegastHinzufuegen(simMinute, 2, kartenTyp);
+	}
+}
+
+/* Funktion ermittelt welche Eintrittskarte die Gäste kaufen */
+int eintrittskarteKaufen(int menge) {
+	int wahrscheinlichkeit;
+	
+	/* Es besteht eine Wahrscheinlichkeit von 1/10 für Tageskarte/2H-Karte */
+	wahrscheinlichkeit = zufallszahl(11);
+	/* Tageskarten haben den Wert 300 zugeordnet */
+	if(wahrscheinlichkeit == 0) {
+		tagesKarte += menge;
+		return 300;
+	}
+	/* 2H-Karten haben den Wert 120 zugeordnet */
+	else {
+		zweiStundenkarte += menge;
+		return 120;
+	}
+}
+
+/* Funktion sorgt dafür das alle Gäste die länger bleiben als ihre Karte gültig ist, ihre Karte verlängern */
+void eintrittskarteVerlaengern(int simMinute) {
+	int vergangeneZeit;
+	
+	badegastAktuell = badegastAnfang;
+	
+	/* Schleife läuft einmal durch alle Badegäste */
+	while(badegastAktuell != NULL) {
+		
+		/* Wenn der Gast keine Tageskarte(300) hat wird geprüft ob er verlängern muss */
+		if(badegastAktuell->kartenTyp != 300) {
+			
+			/* Ermittelt die seit betreten des Schwimmbads vergangene Zeit */
+			/* (extra - 60, weil die Simulationszeit 1 Stunde vor der eröffnung des Schwimmbads beginnt) */
+			vergangeneZeit = simMinute - badegastAktuell->ankunftsZeit  - 60;
+			
+			/* Es wird geprüft ob die Aktuelle abgelaufen ist */
+			if(badegastAktuell->kartenTyp < vergangeneZeit) {
+				
+				/* Ist die Karte abgelaufen werden die jeweiligen Zähler für die Ausgabe angepasst */
+				switch(badegastAktuell->kartenTyp) {
+					case 120: {
+						zweiStundenkarte--;
+						plusEineStunde++;
+						break;
+					}
+					case 180: {
+						plusEineStunde--;
+						plusZweiStunden++;
+						break;
+					}
+					case 240: {
+						plusZweiStunden--;
+						tagesKarte++;
+						break;
+					}
+				}
+				
+				/* Der neue Kartentyp wird gespeichert */
+				badegastAktuell->kartenTyp += 60;
+			}
+		}
+		
+		/* Anschließend wird zum nächsten Badegast gewechselt */
+		badegastAktuell = badegastAktuell->danach;
 	}
 }
 
 /* Funktion fügt die eingelassenen Badegäste zur Liste der Badegäste hinzu */
-int badegastHinzufuegen(int simMinute, int ankunftsTyp) {
+int badegastHinzufuegen(int simMinute, int ankunftsTyp, int kartenTyp) {
 	
 	/* Reserviert Speicher für einen neuen Badegasteintrag */
 	if(!(badegastAktuell = (Badegast* ) malloc(sizeof(Badegast)))) {
@@ -241,7 +331,7 @@ int badegastHinzufuegen(int simMinute, int ankunftsTyp) {
 	badegastAktuell->index = badegaesteGesamtMenge;
 	badegastAktuell->ankunftsZeit = simMinute;
 	badegastAktuell->ankunftsTyp = ankunftsTyp;
-	badegastAktuell->kartenTyp = 0;
+	badegastAktuell->kartenTyp = kartenTyp;
 	badegastAktuell->ereignisTyp = 0;
 	badegastAktuell->davor = badegastEnde;
 	badegastAktuell->danach = NULL;
@@ -346,13 +436,13 @@ void ausgabeVerarbeitung(int simMinute) {
 	system("cls");
 	
 	printf("Schwimmbad Wasserwesen");
-	printf("\n\n2-Stunden-Karten: %10d", 0);
+	printf("\n\n2-Stunden-Karten: %10d", zweiStundenkarte);
 	printf("%*sRutschen", 30, "");
-	printf("\n1 Stunde verlaengert: %6d", 0);
-	printf("\n2 Stunden verlaengert: %5d", 0);
+	printf("\n1 Stunde verlaengert: %6d", plusEineStunde);
+	printf("\n2 Stunden verlaengert: %5d", plusZweiStunden);
 	printf("%*snormal", 8, "");
 	printf("%*sSchwimmring", 26, "");
-	printf("\nTageskarten: %15d", 0);
+	printf("\nTageskarten: %15d", tagesKarte);
 	printf("%*sauf Treppe: %3d", 8, "", 0);
 	printf("%*sauf Treppe: %*s%3d", 17, "", 7, "", 0);
 	printf("\nRutschennutzungen: %9d", 0);
