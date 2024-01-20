@@ -1,0 +1,101 @@
+AUFGABE D: SCHWIMMBAD-SIMULATOR
+
+Die Aufgabe enthält optionale Anforderungen. Werden diese erfüllt können Zusatzpunkte gesammelt werden.
+
+PROGRAMMIEREN SIE EINEN SCHWIMMBAD-SIMULATOR!
+
+Im beschaulichen Wasserswesen gibt es einen Schwimmpark mit zwei Wasserrutschen. Die eine Wasserrutsche ist eine normale Rutsche; eine Abfahrt dauert zwischen 22 Sekunden und 40 Sekunden. Die andere Wasserrutsche ist mit Schwimmringen zu benutzen. Es gibt insgesamt 15 Schwimmringe. Es ist selbsterklärend, dass immer nur einer auf jeder Rutsche rutschen darf.
+
+Die Rutsche mit den Schwimmringen hat eine Weiche auf halber Strecke. Nach jedem Rutscher wechselt die Weichenposition so, dass abwechselnd links und rechts gerutscht wird. Die linke Bahn dauert zwischen 20 und 35 Sekunden, die recht zwischen 22 und 38 Sekunden.
+
+(Im Sinne dieser Prüfungsleistung gehen Sie davon aus, dass keine pickeligen Teenager die Rutschen mit Absicht blockieren.)
+
+Nach erfolgter Rutschaktion werden die Schwimmringe automatisch eingesammelt und über einen Automaten wieder ausgegeben.
+
+Bei der Rutsche mit den Schwimmringen dürfen sich nur Personen anstellen, die einen der 15 Schwimmringe in der Hand halten. Die Schwimmmeister achten da besonders drauf!
+(Die bedeutet, dass sich an der Schwimmringmaschine eine Warteschlange bilden kann.)
+
+Das Besteigen der Wendeltreppen dauert ohne Warteschlange bei beiden Rutschen 1 Minute. Abhängig von der Rutschenbelegung können sich auf den Treppen Warteschlangen bilden.
+
+Das Schwimmbad öffnet um 10 Uhr und schließt um 20 Uhr. Es hat eine Maximalkapazität von 350 Besuchern. An einem Durchschnittlichen Tag kommen 800 Besucher ins Schwimmbad.
+
+Das Schwimmbad hat drei Becken:
+* Kinderbecken (max. 50 Personen)
+* Schwimmerbecken (max. 125 Personen)
+* Außenbecken (max. 175 Personen)
+
+Es gibt zwei Kartentypen:
+* 2-Stunden-Karte
+* Tageskarte
+
+Besucher mit einer 2-Stunden-Karte können ihre Schwimmzeit zweimal um je 1 Stunde verlängern. Nach Ablauf der 4. Stunde wird (nach Zahlung der Differenz) die Karte automatisch zur Tageskarte.
+
+Um die Schwimmbecker verteilt sind 80 Liegen und Sonnenstühle, auf denen man sich ausruhen darf.
+
+OPTIONAL: Es gibt ein kleines Bistro im Schwimmbad. Es hat von 11:30 Uhr bis 15:30 Uhr geöffnet. Hier dürfen Schwimmer Nahrung zu sich nehmen und etwas trinken. Die Aufenthaltszeit im Bistro ist auf 30 Minuten begrenzt (Wer um 15:30 Uhr noch etwas kauft darf bis 16:00 Uhr sitzen bleiben). Es gibt Platz für maximal 20 Besucher.
+
+Die Besucher kommen über den Tag zum Schwimmbad:
+* zu Fuß - einzelne Schwimmer aus Wasserwesen
+** in Wasserwesen wohnen 55 Schwimmer
+* mit dem Auto - ein bis fünf Besucher
+** in Wasserwesen ist absolutes Halteverbot
+** es gibt nur am Schwimmbad einen Parkplatz für 30 Autos
+* mit dem Bus - maximal fünfzig Besucher
+** der erste Bus kommt um 9:50 Uhr und fährt wieder um 9:53 Uhr
+** alle 30 Minuten kommt ein Bus
+** der letzte Bus kommt um 19:10 Uhr und fährt um 19:13 Uhr
+
+Beachten Sie, dass alle Besucher auf demselben Weg gehen, über den sie gekommen sind.
+(Soll heißen: Wenn über den Tag 314 Besucher mit dem Auto gekommen sind, müssen 314 Besucher mit demselben Auto wieder abreisen, mit dem sie gekommen sind.)
+(Gehen Sie davon aus, dass alle Besucher schlau genug sind, sich ihre Zeit so einzuteilen, dass sie, sollten sie mit dem Bus gekommen sein, auch wieder mit dem Bus abreisen können. Beachten Sie, dass der letzte Bus fährt, bevor das Schwimmbad schließt!)
+
+Morgens und abends ist relativ wenig los. Die Spitzenzeit ist von 12 Uhr bis 17 Uhr.
+(Zur Vereinfachung dürfen Sie von einem linearen Anstieg und Abfall ausgehen.)
+
+
+ANFORDERUNGEN AN DIE PRÜFUNGSLEISTUNG
+
+Ihr Schwimmbad-Simulator soll eine Pseudo-grafische Ausgabe auf der Konsole haben. Diese soll Texte und Grafikähnliche Objekte immer an der gleichen Stelle anzeigen. (Beispiel weiter unten)
+
+Ab Start des Programms soll die Simulation eines Tages laufen.
+
+Jede Rutschaktion muss eine zufällige Auswahl der Rutsche und der Rutschzeit treffen. Dabei darf die minimale Rutschzeit nicht unterschritten und die maximale Rutschzeit nicht überschritten werden!
+
+Es müssen jederzeit alle Warteschlangenlängen und alle Belegungen ersichtlich sein. Beachten Sie, dass auch die Bushaltestelle eine Warteschlange bilden kann, wenn mehr Besucher abreisen wollen, als der Bus Kapazität hat.
+
+Es muss die Gesamtzahl aller verkauften 2-Stunden-Karten und Tageskarten ersichtlich sein.
+
+Es muss jederzeit die Belegung des Parkplatzes ersichtlich sein.
+
+Es muss ersichtlich sein, wann ein Bus einfährt, wartet und abfährt.
+
+Es muss jederzeit die Anzahl Besucher im Schwimmbad ersichtlich sein.
+
+Es muss die Gesamtzahl aller Rutschennutzungen kommulativ für die Tag gezählt werden.
+
+Der Simulator soll nicht in Echtzeit laufen. Standardmäßig soll eine Realsekunde einer simulierten Minute entsprechen. Auf Tastendruck soll um den Faktor 10 beschleunigt werden.
+
+Die Simulation muss jederzeit per Tastendruck pausiert werden können.
+
+Die Simulation muss jederzeit per Tastendruck beendet werden können.
+
+Beachten Sie unbedingt, dass die zeitliche Auflösung der Simulation höher sein muss, als die zeitliche Auflösung der Darstellung (Rutschen im Sekundenbereich vs Darstellung in Minuten)!
+
+
+BEISPIELAUSGABE
+
+2-Stunden-Karten:     151                         Rutschen
+1 Stunde verlängert:    1       normal                      Schwimmring
+2 Stunden verlängert:   9       auf Treppe:  20             auf Treppe:        3
+Tageskarten:          112                                   Ringe im Automat: 11
+Rutschennutzungen:    297
+                                                   Becken
+                                Kinder            Schwimmer            Außen
+                                40                80                   25
+
+                                Bistro: 18/20                      Liegen: 14/80
+
+12:12 Uhr                               (H):  2
+Personen im Schwimmbad:  202            [P]:  13 Autos
+...(T)urbo
+...(P)ause
