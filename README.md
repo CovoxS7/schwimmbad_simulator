@@ -11,7 +11,7 @@ Der Start erfolgt über die schwimmbad_simulator.exe
 Für die Simulation wurden bestimmte Annahmen getroffen wie sich die
 Badegäste in verschiedenen Situationen verhalten. Die Simulation selber 
 läuft von 09:50 Uhr (für den ersten Bus) und 20:00 Uhr. Da die Hauptauslastung 
-des Schwimmbads zwischen 12:00 Uhr und 17:00 Uhr Uhr liegt, sind die Hauptzeiten 
+des Schwimmbads zwischen 12:00 Uhr und 17:00 Uhr liegt, sind die Hauptzeiten 
 für die Anreise zwischen 11:00 Uhr und 16:00 Uhr. Davor und danach steigt und 
 sinkt die Auslastung linear.
 
