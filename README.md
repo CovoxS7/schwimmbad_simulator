@@ -27,8 +27,8 @@ Schwimmbad wollen. Schließlich bezahlt man 2 Stunden, da will man wenigstens
 ein einhalb Stunden Spaß für haben.
 
 ### Autofahrer
-Autofahrer sind relativ flexibel. Hier hängt es auch nicht zwingend am Fahrer,
-möchte ein Mitfahrer gehen, müssen alle gehen. Abgesehen davon wollen auch sie 
+Autofahrer sind relativ flexibel. Hier hängt es auch nicht zwingend am Fahrer.
+Möchte ein Mitfahrer gehen, müssen alle gehen. Abgesehen davon wollen auch sie 
 wenigstens ein einhalb Stunden Zeit zum Baden haben. Die Gäste erscheinen 
 also bis maximal 18:30 Uhr mit dem Auto.
 
