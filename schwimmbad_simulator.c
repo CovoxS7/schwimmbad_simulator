@@ -18,6 +18,9 @@
 #define MAX_AUTO			5
 #define MAX_PARKPLATZ		30
 #define MAX_FUSSGAENGER		55
+#define MAX_KINDERBECKEN	50
+#define MAX_SCHWIMMERBECKEN	125
+#define MAX_AUSSENBECKEN	175
 
 /* Globale Variablen */
 int badegaesteGesamtMenge = 0;
@@ -32,6 +35,9 @@ int zweiStundenkarte = 0;
 int plusEineStunde = 0;
 int plusZweiStunden = 0;
 int tagesKarte = 0;
+int kinderbecken = 0;
+int schwimmerbecken = 0;
+int aussenbecken = 0;
 
 /* Struktur f¸r einen Badegast */
 typedef struct Badegast{
@@ -67,6 +73,7 @@ void busAbreise(int simMinute);
 int badegastHinzufuegen(int simMinute, int ankunftsTyp, int kartenTyp);
 int badegaesteDurchsuchen();
 void badegastFreilassen();
+void schwimmbeckenWahl();
 int zufallszahl(int maximum);
 void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit);
 void ausgabeVerarbeitung(int simMinute);
@@ -94,6 +101,22 @@ void simulation() {
 			
 		/* Funktionen ab ÷ffnung des Schwimmbads */
 		if(simMinute > 59) {
+					
+			/* Badeg‰ste tretten die Heimreise an */
+			abreise(simMinute);
+			
+			/* Sammelt die Badeg‰ste an der Bushaltestelle ein */
+			busAbreise(simMinute);
+			
+			/* L‰sst die Badeg‰ste einzeln ins Schwimmbad */
+			badegaesteEinlass(simMinute);
+			
+			/* Pr¸ft ob ein Gast seine Eintrittskarte verl‰ngern muss */
+			eintrittskarteVerlaengern(simMinute);
+			
+			/* Badeg‰ste suchen sich ein Schwimmbecken raus */
+			schwimmbeckenWahl();
+		
 			/* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 			/* Hier werden die Funktionen aufgerufen die jede Minute ausgef¸hrt werden */
 			
@@ -104,12 +127,6 @@ void simulation() {
 			
 			
 			
-			
-			/* L‰sst die Badeg‰ste einzeln ins Schwimmbad */
-			badegaesteEinlass(simMinute);
-			
-			/* Pr¸ft ob ein Gast seine Eintrittskarte verl‰ngern muss */
-			eintrittskarteVerlaengern(simMinute);
 			
 			/* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 			
@@ -129,12 +146,6 @@ void simulation() {
 				/* ------------------------------------------------------------------------ */
 			}
 		}
-		
-		/* Badeg‰ste tretten die Heimreise an */
-		abreise(simMinute);
-		
-		/* Sammelt die Badeg‰ste an der Bushaltestelle ein */
-		busAbreise(simMinute);
 
 		/* Eingabeverarbeitung */
 		eingabeVerarbeitung(simMinute, &simGeschwindigkeit);
@@ -519,6 +530,73 @@ void badegastFreilassen() {
 	}
 }
 
+/* Funktion l‰sst die Badeg‰ste ein Becken ausw‰hlen */
+void schwimmbeckenWahl() {
+	int auswahl, wahrscheinlichkeit;
+	
+	/* Becken werden zu Beginn wieder auf 0 gesetzt */
+	kinderbecken = 0;
+	schwimmerbecken = 0;
+	aussenbecken = 0;
+	
+	badegastAktuell = badegastAnfang;
+	
+	/* Schleife l‰uft einmal ¸ber alle Badeg‰ste */
+	while(badegastAktuell != NULL) {
+		
+		/* Wenn der Badegast noch keinem anderen Ereignis zugeordnet ist, sucht er sich ein Becken aus */
+		if(badegastAktuell->ereignisTyp == 0) {
+			
+			/* Die Gesamtkapazit‰t der Becken (350) wurde durch 25 geteilt */
+			/* Davon wird eine Zufallszahl generiert */
+			wahrscheinlichkeit = zufallszahl(MAX_AUSLASTUNG / 25);
+			
+			/* 2 Zahlen (0/1) haben die Wahrscheinlichkeit auf Auswahl 0 (Kinderbecken) */
+			if(wahrscheinlichkeit < 2) {
+				 auswahl = 0;
+			}
+			
+			/* 7 Zahlen (7-13) haben die Wahrscheinlichkeit auf Auswahl 2 (Aussenbecken) */
+			else if(wahrscheinlichkeit > 6) {
+				auswahl = 2;
+			}
+			
+			/* Die restlichen 5 Zahlen (2-6) haben die Wahrscheinlichkeit auf Auswahl 1 (Schwimmerbecken) */
+			else {
+				auswahl = 1;
+			}
+			
+			/* Anschlieﬂend wird die Auswahl auf die Vordefinierten Becken gelegt und der Z‰hler erhˆht */
+			/* Ist ein Becken schon voll geht der Switch in den Default-Fall bis der Gast ein freies Becken findet */
+			switch(auswahl) {
+				case 0: if(kinderbecken < MAX_KINDERBECKEN) kinderbecken++; break;
+				case 1: if(schwimmerbecken < MAX_SCHWIMMERBECKEN) schwimmerbecken++; break;
+				case 2: if(aussenbecken < MAX_AUSSENBECKEN) aussenbecken++; break;
+				default: {
+					switch(auswahl) {
+						case 1: if(kinderbecken < MAX_KINDERBECKEN) kinderbecken++; break;
+						case 2: if(schwimmerbecken < MAX_SCHWIMMERBECKEN) schwimmerbecken++; break;
+						case 0: if(aussenbecken < MAX_AUSSENBECKEN) aussenbecken++; break;
+						default: {
+							switch(auswahl) {
+								case 2: if(kinderbecken < MAX_KINDERBECKEN) kinderbecken++; break;
+								case 0: if(schwimmerbecken < MAX_SCHWIMMERBECKEN) schwimmerbecken++; break;
+								case 1: if(aussenbecken < MAX_AUSSENBECKEN) aussenbecken++; break;
+								default: printf("Die Maximalbelastung aller Becken wurde ¸berstiegen!"); break;
+							}
+							break;
+						}
+					}
+					break;
+				}
+			}
+		}
+		
+	/* Anschlieﬂend geht die Schleife weiter zum n‰chsten Gast */
+	badegastAktuell = badegastAktuell->danach;	
+	}
+}
+
 /* Funktion generiert eine Zufallszahl */
 int zufallszahl(int maximum) {
 	return rand() % maximum;
@@ -599,9 +677,9 @@ void ausgabeVerarbeitung(int simMinute) {
 	printf("%*sSchwimmer", 16, "");
 	printf("%*sAussen", 17, "");
 	printf("\n[P]: %3d", autoParkplatz);
-	printf("%*s%3d", 31, "", 0);	/* Kinder */
-	printf("%*s%3d", 22, "", 0);	/* Schwimmer */
-	printf("%*s%3d", 20, "", 0);	/* Auﬂen */
+	printf("%*s%3d", 31, "", kinderbecken);	/* Kinder */
+	printf("%*s%3d", 22, "", schwimmerbecken);	/* Schwimmer */
+	printf("%*s%3d", 20, "", aussenbecken);	/* Auﬂen */
 	
 	/* Zeigt die simulierte Stunde an */
 	/* Unter 10 Stunden wird eine 0 erg‰nzt */
