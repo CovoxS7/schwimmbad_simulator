@@ -191,7 +191,6 @@ void anreise(int simMinute) {
 void busAnreise(int simMinute) {
 	/* Je nach Uhrzeit bringt der Bus mehr oder weniger Gäste */
 	/* Maximal 50 in den Zeiten von 11:00 Uhr und 16:00 Uhr */
-	/* Eine Stunde vor dem letzten Bus kommt kein Gast mehr zum Schwimmbad */
 	if(simMinute < 60) busFahrgaeste = zufallszahl(10) + 10;
 	if(simMinute >= 60 && simMinute < 90) busFahrgaeste = zufallszahl(10) + 20;
 	if(simMinute >= 90 && simMinute < 120) busFahrgaeste = zufallszahl(10) + 30;
@@ -205,19 +204,18 @@ void busAnreise(int simMinute) {
 void autoAnreise(int simMinute){
 	/* Je nach Uhrzeit kommen mehr oder weniger Gäste mit dem Auto */
 	/* Maximal 5 in den Zeiten von 11:00 Uhr und 16:00 Uhr */
-	/* In der letzten Stunde kommt kein Gast mehr zum Schwimmbad */
 	if(simMinute >= 60 && simMinute < 90) autoBelegung = zufallszahl(1) + 2;
 	if(simMinute >= 90 && simMinute < 120) autoBelegung = zufallszahl(1) + 3;
 	if(simMinute >= 120 && simMinute < 420) autoBelegung = zufallszahl(1) + 4;
 	if(simMinute >= 420 && simMinute < 450) autoBelegung = zufallszahl(1) + 3;
 	if(simMinute >= 450 && simMinute < 480) autoBelegung = zufallszahl(1) + 2;
-	if(simMinute >= 480 && simMinute < 600) autoBelegung = zufallszahl(1) + 1;
+	if(simMinute >= 480 && simMinute < 570) autoBelegung = zufallszahl(1) + 1;
 }
 
-/* Funktion der zu Fuß anreisenden Badegäste */
+/* Funktion der zu Fuss anreisenden Badegäste */
 void zuFussAnreise(int simMinute){
-	/* In der letzten Stunde kommt kein Gast mehr zum Schwimmbad */
-	if(simMinute < 600) {
+	/* Fussgänger kommen je nach belieben */
+	if(simMinute < 570) {
 		fussgaengerJa++;
 		fussgaengerGesamt++;
 	}
