@@ -106,6 +106,7 @@ void simulation() {
 			abreise(simMinute);
 			
 			/* Sammelt die Badegäste an der Bushaltestelle ein */
+			/* Todo: busAbreise() zu busHaltestelle(), zusätzlich zur Abreise noch den Zustand vom Bus Ausgeben (Unterwegs, Ankunft, Wartet, Abfahrt) */
 			busAbreise(simMinute);
 			
 			/* Lässt die Badegäste einzeln ins Schwimmbad */
@@ -113,9 +114,6 @@ void simulation() {
 			
 			/* Prüft ob ein Gast seine Eintrittskarte verlängern muss */
 			eintrittskarteVerlaengern(simMinute);
-			
-			/* Badegäste suchen sich ein Schwimmbecken raus */
-			schwimmbeckenWahl();
 		
 			/* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 			/* Hier werden die Funktionen aufgerufen die jede Minute ausgeführt werden */
@@ -145,6 +143,9 @@ void simulation() {
 			
 				/* ------------------------------------------------------------------------ */
 			}
+					
+			/* Badegäste suchen sich ein Schwimmbecken raus */
+			schwimmbeckenWahl();
 		}
 
 		/* Eingabeverarbeitung */
