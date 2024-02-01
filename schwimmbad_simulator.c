@@ -25,6 +25,7 @@
 /* Globale Variablen */
 int badegaesteGesamtMenge = 0;
 int badegaesteAktuelleMenge = 0;
+int busZustand = 0;
 int busFahrgaeste = 0;
 int busHaltestelle = 0;
 int autoBelegung = 0;
@@ -69,7 +70,7 @@ int eintrittskarteKaufen(int menge);
 void eintrittskarteVerlaengern(int simMinute);
 int gehenOderBleiben(int simMinute);
 void abreise(int simMinute);
-void busAbreise(int simMinute);
+void busHaltestellenVerwaltung(int simMinute);
 int badegastHinzufuegen(int simMinute, int ankunftsTyp, int kartenTyp);
 int badegaesteDurchsuchen();
 void badegastFreilassen();
@@ -104,10 +105,6 @@ void simulation() {
 					
 			/* Badegäste tretten die Heimreise an */
 			abreise(simMinute);
-			
-			/* Sammelt die Badegäste an der Bushaltestelle ein */
-			/* Todo: busAbreise() zu busHaltestelle(), zusätzlich zur Abreise noch den Zustand vom Bus Ausgeben (Unterwegs, Ankunft, Wartet, Abfahrt) */
-			busAbreise(simMinute);
 			
 			/* Lässt die Badegäste einzeln ins Schwimmbad */
 			badegaesteEinlass(simMinute);
@@ -147,6 +144,9 @@ void simulation() {
 			/* Badegäste suchen sich ein Schwimmbecken raus */
 			schwimmbeckenWahl();
 		}
+		
+		/* Kümmert sich um die Verwaltung der Bushaltestelle */
+		busHaltestellenVerwaltung(simMinute);
 
 		/* Eingabeverarbeitung */
 		eingabeVerarbeitung(simMinute, &simGeschwindigkeit);
@@ -439,8 +439,17 @@ void abreise(int simMinute) {
 	}
 }
 
-/* Funktion lässt aller 30 Minuten maximal 50 Personen mit dem Bus abholen, letzte Runde 19:13 Uhr */
-void busAbreise(int simMinute) {
+/* Funktion bestimmt wo sich der Bus befindet und nimmt zu den jeweiligen Zeiten die Fahrgäste mit */
+void busHaltestellenVerwaltung(int simMinute) {
+	
+	/* Übergibt je nach Uhrzeit den aktuellen Zustand vom Bus */
+	busZustand = 1;
+	if(((simMinute - 20) % 30 == 0 && simMinute <= 610) || simMinute == 610) busZustand = 2;
+	if(((simMinute - 21) % 30 == 0 && simMinute <= 611) || simMinute == 611) busZustand = 3;
+	if(((simMinute - 22) % 30 == 0 && simMinute <= 612) || simMinute == 612) busZustand = 3;
+	if(((simMinute - 23) % 30 == 0 && simMinute <= 613) || simMinute == 613) busZustand = 4;
+	
+	/* lässt aller 30 Minuten maximal 50 Personen mit dem Bus abholen, letzte Runde 19:13 Uhr */
 	if(((simMinute - 23) % 30 == 0 && simMinute <= 613) || simMinute == 613) {
 		if(busHaltestelle > MAX_BUS) {
 			busHaltestelle -= 50;
@@ -666,21 +675,30 @@ void ausgabeVerarbeitung(int simMinute) {
 	printf("%*snormal", 8, "");
 	printf("%*sSchwimmring", 26, "");
 	printf("\nTageskarten: %15d", tagesKarte);
-	printf("%*sauf Treppe: %3d", 8, "", 0);
-	printf("%*sauf Treppe: %*s%3d", 17, "", 7, "", 0);
+	printf("%*sauf Treppe: %-3d", 8, "", 0);
+	printf("%*sauf Treppe: %*s%-3d", 17, "", 8, "", 0);
 	printf("\nRutschennutzungen: %9d", 0);
-	printf("%*sRinge im Automaten: %2d", 40, "", 0);
+	printf("%*sRinge im Automaten: %-2d", 40, "", 0);
 	printf("\n\nBistro: %2d/20", 0);
 	printf("\nLiegen: %2d/80", 0);
 	printf("%*sBecken", 46, "");
-	printf("\n\n(H): %3d", busHaltestelle);
+	printf("\n\n[P]: %-3d", autoParkplatz);
 	printf("%*sKinder", 28, "");
 	printf("%*sSchwimmer", 16, "");
-	printf("%*sAussen", 17, "");
-	printf("\n[P]: %3d", autoParkplatz);
-	printf("%*s%3d", 31, "", kinderbecken);	/* Kinder */
-	printf("%*s%3d", 22, "", schwimmerbecken);	/* Schwimmer */
-	printf("%*s%3d", 20, "", aussenbecken);	/* Außen */
+	printf("%*sAussen", 16, "");
+	printf("\n(H): %-3d", busHaltestelle);
+	printf("%*s%-3d", 28, "", kinderbecken);	/* Kinder */
+	printf("%*s%-3d", 19, "", schwimmerbecken);	/* Schwimmer */
+	printf("%*s%-3d", 22, "", aussenbecken);	/* Außen */
+	
+	/* prüft wo sich der Bus befindet und macht die entsprechende Ausgabe */
+	switch(busZustand) {
+		case 1: printf("\nBus: Unterwegs"); break;
+		case 2: printf("\nBus: Ankunft"); break;
+		case 3: printf("\nBus: Wartet"); break;
+		case 4: printf("\nBus: Abfahrt"); break;
+		default: printf("\nBus: Faellt aus"); break;
+	}
 	
 	/* Zeigt die simulierte Stunde an */
 	/* Unter 10 Stunden wird eine 0 ergänzt */
