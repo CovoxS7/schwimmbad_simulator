@@ -40,6 +40,8 @@ int kinderbecken = 0;
 int schwimmerbecken = 0;
 int aussenbecken = 0;
 
+int fehler = 0;
+
 /* Struktur für einen Badegast */
 typedef struct Badegast{
 	int index;
@@ -78,6 +80,8 @@ void schwimmbeckenWahl();
 int zufallszahl(int maximum);
 void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit);
 void ausgabeVerarbeitung(int simMinute);
+
+void fehlerAusgabe();
 
 /* Hauptfunktion */
 int main(void) {
@@ -153,6 +157,9 @@ void simulation() {
 		
 		/* Anzeigen der Ergebnisse */
 		ausgabeVerarbeitung(simMinute);
+		
+		/* Im Falle eines Fehlers wird eine Ausgabe erzeugt */
+		fehlerAusgabe();
 		
 		/* Steuert die Simulationsgeschwindigkeit */
 		Sleep(simGeschwindigkeit);
@@ -466,6 +473,7 @@ int badegastHinzufuegen(int simMinute, int ankunftsTyp, int kartenTyp) {
 	/* Reserviert Speicher für einen neuen Badegasteintrag */
 	if(!(badegastAktuell = (Badegast* ) malloc(sizeof(Badegast)))) {
 		/* Hier folgt die Fehlerbehandlung */
+		fehler = 2;
 		return 0;
 	}
 	
@@ -592,7 +600,7 @@ void schwimmbeckenWahl() {
 								case 2: if(kinderbecken < MAX_KINDERBECKEN) kinderbecken++; break;
 								case 0: if(schwimmerbecken < MAX_SCHWIMMERBECKEN) schwimmerbecken++; break;
 								case 1: if(aussenbecken < MAX_AUSSENBECKEN) aussenbecken++; break;
-								default: printf("Die Maximalbelastung aller Becken wurde überstiegen!"); break;
+								default: fehler = 3; break;
 							}
 							break;
 						}
@@ -614,6 +622,7 @@ int zufallszahl(int maximum) {
 
 /* Funktion nimmt Eingaben ohne Enter entgegen und verarbeitet sie */
 void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit) {
+	const char *erlaubteEingabe = "tTpPeE";
 	char eingabe = '\0';
 	char stopPause = '\0';
 	int pauseZaehler = 0;
@@ -622,6 +631,11 @@ void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit) {
 	/* _getch() liest die Taste sofort ohne Eingabetaste */
 	if(_kbhit()) {
 		eingabe = _getch();
+		
+		/* Eingabepuffer leeren */
+		while(_kbhit()) {
+			_getch();
+		}
 		
 		/* Beschleunigt oder Verlangsamt die Simulation um das 10-fache */
 		if(eingabe == 'T' || eingabe == 't') {
@@ -641,6 +655,11 @@ void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit) {
 				/* _getch() liest die Taste sofort ohne Eingabetaste */
 				if(_kbhit()) {
 					stopPause = _getch();
+					
+					/* Eingabepuffer leeren */
+					while(_kbhit()) {
+						_getch();
+					}
 				}
 				
 				/* Solange die Simulation pausiert ist wird eine Ladeanimation angezeigt */
@@ -657,8 +676,36 @@ void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit) {
 						break;
 					}
 				}
+				printf("\nWeiter durch ...(P)ause druecken");
 				Sleep(500);
+								
+				/* Wird E eingegeben, wird die Pause unterbrochen und das Programm beendet sich im nächsten Schritt */				
+				if(stopPause == 'e' || stopPause == 'E') {
+					break;
+				}
 			}
+		}
+		
+		/* Beendet das Programm */
+		if(eingabe == 'e' || eingabe == 'E' || stopPause == 'e' || stopPause == 'E') {
+			badegastAktuell = badegastAnfang;
+			
+			/* Der reservierte Speicher für die Elemente der doppelt Verkettetn Liste wird wieder freigegeben */
+			if(badegastAnfang != NULL) {
+				while(badegastAktuell != NULL) {	
+				badegastAktuell = badegastAktuell->danach;
+				free(badegastAnfang);
+				badegastAnfang = badegastAktuell;
+				}
+				badegastEnde = NULL;
+			}
+			/* Anschließend wird das Programm beendet */
+			exit(0);
+		}
+		
+		/* Prüft ob die Eingabe mit einem Zeichen der erlaubtenEingabe übereinstimmt, wenn nicht wird darauf hingewiesen */
+		if(strchr(erlaubteEingabe, eingabe) == NULL) {
+			fehler = 1;
 		}
 	}
 }
@@ -722,4 +769,15 @@ void ausgabeVerarbeitung(int simMinute) {
 	printf("\nTagesauslastung: %11d", badegaesteGesamtMenge);
 	printf("\n...(T)urbo");
 	printf("\n...(P)ause");
+	printf("\n...(E)nde");
+}
+
+/* Funktion erzeugt bei Fehlern eine Ausgabe in der Konsole */
+void fehlerAusgabe() {
+	switch(fehler) {
+		case 1: printf("\n\nKeine Gueltige Eingabe"); break;
+		case 2: printf("\n\nDatensatz für einen weiteren Badegast konnte nicht angelegt werden."); break;
+		case 3: printf("Die Maximalbelastung aller Becken wurde überstiegen!"); break;
+	}
+	fehler = 0;
 }
