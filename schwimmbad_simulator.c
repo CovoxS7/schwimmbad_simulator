@@ -11,6 +11,7 @@
 #include <time.h>
 #include <conio.h>
 #include <windows.h>
+#include <stdbool.h>
 
 /* Konstanten */
 #define MAX_AUSLASTUNG		350
@@ -21,6 +22,15 @@
 #define MAX_KINDERBECKEN	50
 #define MAX_SCHWIMMERBECKEN	125
 #define MAX_AUSSENBECKEN	175
+#define MIN_NORMAL_RUTSCHE_DAUER 22
+#define MAX_NORMAL_RUTSCHE_DAUER 40
+#define MIN_LEFT_RING_RUTSCHE_DAUER 20
+#define MAX_LEFT_RING_RUTSCHE_DAUER 35
+#define MIN_RIGHT_RING_RUTSCHE_DAUER 22
+#define MAX_RIGHT_RING_RUTSCHE_DAUER 38
+#define MAX_SCHWIMMRINGE 15
+#define TREPPEN_BESTEIGUNGSZEIT 60
+#define MAX_QUEUE_SIZE 100
 
 /* Globale Variablen */
 int badegaesteGesamtMenge = 0;
@@ -53,6 +63,31 @@ typedef struct Badegast{
 	struct Badegast *davor;
 	struct Badegast *danach;
 } Badegast;
+
+/* Struktur für Rutschentypen */
+typedef enum RutscheTyp{
+	NORMAL,
+	RING
+} RutscheTyp;
+
+/* Struktur für Rutschen */
+typedef struct Rutsche{
+	RutscheTyp typ;
+	bool besetzt;
+} Rutsche;
+
+/* Definition der Schwimmringmaschine */
+typedef struct Schwimmringmaschine {
+	int verfuegbareRinge;
+	Badegast* warteschlange[MAX_QUEUE_SIZE]; /*Array für Badegäste mit Schwimmringen */
+	int warteschlangeAnzahl;
+} Schwimmringmaschine;
+
+/* Struktur der Wendeltreppe */
+typedef struct Wendeltreppe {
+	Badegast* warteschlange[MAX_QUEUE_SIZE]; /* Array für Badegäste an Wendeltreppe */
+	int warteschlangeAnzahl;
+} Wendeltreppe;
 
 /* Zeiger für doppelt verkettete Liste */
 Badegast *badegastAnfang = NULL;
@@ -604,6 +639,157 @@ void schwimmbeckenWahl() {
 		
 	/* Anschließend geht die Schleife weiter zum nächsten Gast */
 	badegastAktuell = badegastAktuell->danach;	
+	}
+}
+
+/* ABSCHNITT RUTSCHEN */
+
+/* zufaellige Zeitgenerierung für Rutschendauer */
+int generiereDauer(int min, int max){
+	return rand() % (max - min +1) +min;
+}
+
+/* Erstellung der Instanzen */ 
+Rutsche normalRutsche;
+Rutsche ringRutsche;
+Schwimmringmaschine schwimmringmaschine;
+Wendeltreppe wendeltreppe;
+
+/* Initialisierung der Rutschen */
+void initialisiereRutschen(){
+	normalRutsche.typ = NORMAL;
+	normalRutsche.besetzt = false;
+	ringRutsche.typ = RING;
+	ringRutsche.besetzt = false;
+	int verfuegbareSchwimmringe = MAX_SCHWIMMRINGE;
+}
+
+void benutzeNormaleRutsche(Badegast *badegast){
+	int dauer = generiereDauer(MIN_NORMAL_RUTSCHE_DAUER, MAX_NORMAL_RUTSCHE_DAUER);
+	
+	normalRutsche.besetzt = true;
+}
+
+void benutzeRingRutsche(Badegast *badegast){
+	/* Uberpruefung on genug Schwimmringe vorhanden sind */
+	if (verfuegbareSchwimmringe > 0){
+		/* Generiere Dauer für Ringrutsche abhängig von Weichenposition */
+		int minDauer, maxDauer;
+		if (ringRutsche.typ == LEFT_RING){
+			minDauer = MIN_LEFT_RING_RUTSCHE_DAUER;
+			maxDauer = MAX_LEFT_RING_RUTSCHE_DAUER;
+		} else {
+			minDauer = MIN_RIGHT_RING_RUTSCHE_DAUER;
+			maxDauer = MAX_RIGHT_RING_RUTSCHE_DAUER;
+		}
+		int dauer = generiereDauer(minDauer, maxDauer);
+		
+		/* Aktualisiere die Weichenposition */
+		if (ringRutsche.typ == LEFT_RING){
+			ringRutsche.typ = RIGHT_RING;
+		} else {
+			ringRutsche.typ = LEFT_RING;
+		}
+		ringRutsche.besetzt = true
+	}
+}
+
+/* WIRD WAHRSCHEINLICH NICHT MEHR GEBRAUCHT */
+void badegastRutschen(){
+	badegastAktuell = badegastAnfang;
+	
+	while (badegastAktuell != NULL) {
+		
+		/* Wenn Badegast noch kein Ereignis hat, wähle ihn für Rutsche aus */
+		if (badegastAktuell->ereignisTyp == 0){
+			
+			if (rutschenTypwaehlen(badegastAktuell)){
+				
+				if (badegastAktuell->ereignisTyp == 2){
+					/*Ereignistyp 2: Normale Rutsche */
+					benutzeNormaleRutsche(badegastAktuell);
+				} else if (badegastAktuell->ereignisTyp == 3){
+					/*Ereignistyp 3:Ringrutsche */
+					benutzeRingRutsche(badegastAktuell);
+				}
+			}
+		}
+		badegastAktuell = badegastAktuell->danach;
+	}
+}
+/* WIRD WAHRSCHEINLICH NICHT MEHR GEBRAUCHT */
+
+/* Zufaelliges Auswaehler der beides Rutschen */
+bool rutschenTypwaehlen(Badegast *badegast){
+	int zufall = rand() % 2;
+	
+	if(zufall == 0){
+		/* Wenn Zufallszahl 0 = waehle normale Rutsche */
+		badegastAktuell->ereignisTyp = 2;
+	} else{
+		/* Ansonsten waehle Ringrutsche */
+		badegastAktuell->ereignisTyp = 3;
+	}
+	return true;
+}
+
+/* Funktion zum Einsammeln der Schwimmringe nach der Rutschaktion */
+void schwimmringeEinsammeln(int benutzteRinge){
+	schwimmringmaschine.verfuegbareRinge -= benutzteRinge;
+}
+
+/* Funktion zum Anstellen an Schwimmringmaschine */
+bool anstellenSchwmmringmaschine(Badegast *badegast){
+	if (schwimmringmaschine.verfuegbareRinge > 0){
+		/* Schwimmring wird entnommen */
+		schwimmringmaschine.verfuegbareRinge--;
+		return true;
+	} else {
+		/* Badegast muss warten, da keine Schwimmringe verfügbar sind */
+		if (schwimmringmaschine.warteschlangeAnzahl < MAX_QUEUE_SIZZE) {
+			schwimmringmaschine.warteschlange[schwimmringmaschine.warteschlangeAnzahl++] =  badegast;
+			return false;
+		} else {
+			/*Warteschlange ist voll */
+			return false;
+		}
+	}
+}
+
+/* Hauptfunktion für die Benutzung der Rutschen */
+void benutzeRutsche(Badegast *badegast){
+	if (badegast->ereignisTyp == NORMAL) {
+		/* Überprüfe, ob die normale Rutsche frei ist */
+		if(!normalRutsche.besetzt){
+			/* Benutze normale Rutsche */
+			benutzeNormaleRutsche(badegast);
+		}else {
+			/* Falls besetzt, füge Badegast an Warteschlange der Wendeltreppe hinzu */
+			/* Wendeltreppen logik hinzufügen */
+		}
+	} else if (badegast->ereignisTyp == RING){
+		/* Überprüfe ob Schwimmringe verfügbar sind */
+		if (anstellenSchwimmringmaschine(badegast)) {
+			/* Benutze Ringrutsche */
+			benutzeRingRutsche(badgeast);
+		} else {
+			// Falls keine Schwimmringe verfügbar sind, füge den Badegast der Warteschlange an der Schwimmringmaschine hinzu
+		}
+	}
+}
+
+/* Hauptfunktion für die Simulation der Rutschenbenutzung */
+void simuliere Rutschenbenutzung () {
+	badegastAktuell = badegastAnfang;
+	
+	/*Schleife über alle Badegäaste */
+	while (badegastAKtuell != NULL) {
+		/* Überprüfe ob der Badegast ein Ereignis hat */
+		if (badegastAktuell->ereignisTyp == 0) {
+			benutzeRutsche(badegastAktuell);
+		}
+		/* Nächster Badegast wird ausgewählt */
+		badegastAktuell = badegastAktuell->danach;
 	}
 }
 
