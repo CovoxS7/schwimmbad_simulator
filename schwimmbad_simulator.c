@@ -613,6 +613,7 @@ int zufallszahl(int maximum) {
 
 /* Funktion nimmt Eingaben ohne Enter entgegen und verarbeitet sie */
 void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit) {
+	const char *erlaubteEingabe = "tTpPeE";
 	char eingabe = '\0';
 	char stopPause = '\0';
 	int pauseZaehler = 0;
@@ -620,9 +621,12 @@ void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit) {
 	/* _kbhit() prüft ob eine Taste gedrückt wurde */
 	/* _getch() liest die Taste sofort ohne Eingabetaste */
 	if(_kbhit()) {
-		fflush(stdin);
-		fflush(stdout);
 		eingabe = _getch();
+		
+		/* Eingabepuffer leeren */
+		while(_kbhit()) {
+			_getch();
+		}
 		
 		/* Beschleunigt oder Verlangsamt die Simulation um das 10-fache */
 		if(eingabe == 'T' || eingabe == 't') {
@@ -635,15 +639,18 @@ void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit) {
 		}
 		
 		/* Pausiert die Simulation bis zum erneuten drücken der P-Taste */
-		else if(eingabe == 'P' || eingabe == 'p') {
+		if(eingabe == 'P' || eingabe == 'p') {
 			while(stopPause != 'P' && stopPause != 'p') {
 				
 				/* _kbhit() prüft ob eine Taste gedrückt wurde */
 				/* _getch() liest die Taste sofort ohne Eingabetaste */
 				if(_kbhit()) {
-					fflush(stdin);
-					fflush(stdout);
 					stopPause = _getch();
+					
+					/* Eingabepuffer leeren */
+					while(_kbhit()) {
+						_getch();
+					}
 				}
 				
 				/* Solange die Simulation pausiert ist wird eine Ladeanimation angezeigt */
@@ -660,13 +667,18 @@ void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit) {
 						break;
 					}
 				}
-				printf("\nZum beenden nochmal ...(P)ause druecken");
+				printf("\nWeiter durch ...(P)ause druecken");
 				Sleep(500);
+								
+				/* Wird E eingegeben, wird die Pause unterbrochen und das Programm beendet sich im nächsten Schritt */				
+				if(stopPause == 'e' || stopPause == 'E') {
+					break;
+				}
 			}
 		}
 		
 		/* Beendet das Programm */
-		else if(eingabe == 'e' || eingabe == 'E') {
+		if(eingabe == 'e' || eingabe == 'E' || stopPause == 'e' || stopPause == 'E') {
 			badegastAktuell = badegastAnfang;
 			
 			/* Der reservierte Speicher für die Elemente der doppelt Verkettetn Liste wird wieder freigegeben */
@@ -682,7 +694,8 @@ void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit) {
 			exit(0);
 		}
 		
-		else {
+		/* Prüft ob die Eingabe mit einem Zeichen der erlaubtenEingabe übereinstimmt, wenn nicht wird darauf hingewiesen */
+		if(strchr(erlaubteEingabe, eingabe) == NULL) {
 			fehler = 1;
 		}
 	}
