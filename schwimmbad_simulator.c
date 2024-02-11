@@ -2,7 +2,7 @@
 /* Ein Konsolen Programm dass die */
 /* Tagesauslastung in einem Schwimmbad simuliert */
 /* Autor: Hans Kuntsche */
-/* Autor: S�ren Lehmann */
+/* Autor: Soeren Lehmann */
 /* Datum: 12.01.2024 */
 
 /* Bibliotheken */
@@ -44,22 +44,22 @@ int aussenbecken = 0;
 
 int fehler = 0;
 
-/* Struktur f�r einen Badegast */
+/* Struktur fuer einen Badegast */
 typedef struct Badegast{
 	int index;
 	int ankunftsZeit;
-	int ankunftsTyp;		/* 0 = Bus, 1 = Auto, 2 = Fu�g�nger */
+	int ankunftsTyp;		/* 0 = Bus, 1 = Auto, 2 = Fussgaenger */
 	int kartenTyp;			/* 120 = 2h, 180 = 1h verl., 240 = 2h verl., 300 = Tageskarte */
 	int ereignisTyp;		/* 0 = Frei, 1 = Liege, 2 = Normal, 3 = Ring */
 	int ereignisZeit;
-	/* Weitere Eigenschaften f�r einen Badegast hier eintragen */
+	/* Weitere Eigenschaften fuer einen Badegast hier eintragen */
 	
 	
 	struct Badegast *davor;
 	struct Badegast *danach;
 } Badegast;
 
-/* Zeiger f�r doppelt verkettete Liste */
+/* Zeiger fuer doppelt verkettete Liste */
 Badegast *badegastAnfang = NULL;
 Badegast *badegastEnde = NULL;
 Badegast *badegastAktuell = NULL;
@@ -100,34 +100,34 @@ int main(void) {
 
 /* Funktion verwaltet den zeitlichen Ablauf der Simulation */
 void simulation() {
-	int simZeit = (11 * 60) + 1;	/* (10h �ffnungszeit + 1h Vorlauf) * 60min + 1min um auf 20:00 zu kommen */
+	int simZeit = (11 * 60) + 1;	/* (10h oeffnungszeit + 1h Vorlauf) * 60min + 1min um auf 20:00 zu kommen */
 	int simGeschwindigkeit = 1000;
 	int simMinute; 
 	int simSekunde;
 	
 	/* Schleifeninhalt wird jede simulierte Minute aufgerufen (entsprechend 1 Realsekunde) */
-	/* simMinute = 50 l�sst die Simulation 09:50 starten f�r den ersten Bus */
+	/* simMinute = 50 laesst die Simulation 09:50 starten fuer den ersten Bus */
 	for(simMinute = 50; simMinute < simZeit; simMinute++) {
 				
 		/* Ruft die anreise-Funktion auf */
 		anreise(simMinute);
 			
-		/* Funktionen ab �ffnung des Schwimmbads */
+		/* Funktionen ab oeffnung des Schwimmbads */
 		if(simMinute > 59) {
 					
-			/* Badeg�ste tretten die Heimreise an */
+			/* Badegaeste tretten die Heimreise an */
 			abreise(simMinute);
 			
-			/* L�sst die Badeg�ste einzeln ins Schwimmbad */
+			/* Laesst die Badegaeste einzeln ins Schwimmbad */
 			badegaesteEinlass(simMinute);
 			
-			/* Pr�ft ob ein Gast seine Eintrittskarte verl�ngern muss */
+			/* Prueft ob ein Gast seine Eintrittskarte verlaengern muss */
 			eintrittskarteVerlaengern(simMinute);
 		
 			/* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
-			/* Hier werden die Funktionen aufgerufen die jede Minute ausgef�hrt werden */
+			/* Hier werden die Funktionen aufgerufen die jede Minute ausgefuehrt werden */
 			
-				/* L�sst die Ereignisse ablaufen */
+				/* Laesst die Ereignisse ablaufen */
 				ereignisAblauf();
 			
 			
@@ -142,9 +142,9 @@ void simulation() {
 			/* Schleifeninhalt wird jede simulierte Sekunde aufgerufen (entsprechen 1/60 Realsekunden) */
 			for(simSekunde = 0; simSekunde < 60; simSekunde++) {
 				/* ------------------------------------------------------------------------ */
-				/* Hier werden die Funktionen aufgerufen die jede Sekunde ausgef�hrt werden */
+				/* Hier werden die Funktionen aufgerufen die jede Sekunde ausgefuehrt werden */
 			
-				/* Badeg�ste entscheiden zuf�llig ob sie Rutschen gehen */
+				/* Badegaeste entscheiden zufaellig ob sie Rutschen gehen */
 				/* oder auf eine Liege oder in einem der Becken bleiben */
 				ereignisWahl(simMinute);
 			
@@ -155,13 +155,13 @@ void simulation() {
 				/* L�sst die Zeit auf der Liege ablaufen */
 				liegenAblauf();
 				
-				/* Badeg�ste suchen sich ein Schwimmbecken raus */
+				/* Badegaeste suchen sich ein Schwimmbecken raus */
 				schwimmbeckenWahl();
 				/* ------------------------------------------------------------------------ */
 			}
 		}
 		
-		/* K�mmert sich um die Verwaltung der Bushaltestelle */
+		/* Kuemmert sich um die Verwaltung der Bushaltestelle */
 		busHaltestellenVerwaltung(simMinute);
 
 		/* Eingabeverarbeitung */
@@ -178,39 +178,39 @@ void simulation() {
 	}
 }
 
-/* Funktion Simuliert die Anreise der Badeg�ste */
+/* Funktion Simuliert die Anreise der Badegaeste */
 void anreise(int simMinute) {
 	int wahrscheinlichkeit;
 	
-	/* Alle 30 Minuten bringt der Bus neue Badeg�ste */
+	/* Alle 30 Minuten bringt der Bus neue Badegaeste */
 	/* Erster Bus 9:50 Uhr, letzter Bus 19:10 Uhr */
 	if(((simMinute - 20) % 30 == 0 && simMinute <= 610) || simMinute == 610) {
-		/* Der Bus bringt nur soviele G�ste, dass die maximale */
-		/* Auslastung des Schwimmbads nicht �berschritten werden kann */
+		/* Der Bus bringt nur soviele Gaeste, dass die maximale */
+		/* Auslastung des Schwimmbads nicht ueberschritten werden kann */
 		if(badegaesteAktuelleMenge <= (MAX_AUSLASTUNG - MAX_BUS - MAX_AUTO - 1)) {
 			busAnreise(simMinute);
 		}
 	}
 
-	/* Anreise ab �ffnung des Schwimmbads */
+	/* Anreise ab Oeffnung des Schwimmbads */
 	if(simMinute >= 60) {
 		
 		/* Es besteht eine Wahrscheinlichkeit von 1:5 das in dieser Minute ein Auto ankommt */
 		wahrscheinlichkeit = zufallszahl(6);
 		if(wahrscheinlichkeit == 0 && autoParkplatz < MAX_PARKPLATZ) {
-			/* Mit dem Auto kommen nur soviele G�ste, dass die maximale */
-			/* Auslastung des Schwimmbads nicht �berschritten werden kann */
+			/* Mit dem Auto kommen nur soviele Gaeste, dass die maximale */
+			/* Auslastung des Schwimmbads nicht ueberschritten werden kann */
 			if(badegaesteAktuelleMenge <= (MAX_AUSLASTUNG - MAX_AUTO - 1)) {
 				autoAnreise(simMinute);
 			}
 		}
 		
 		/* Es besteht eine Wahrscheinlichkeit von 1:10 das in dieser Minute ein Gast zu Fuss ankommt */
-		/* Au�erdem wird mit einbezogen ob schon die Maximale Menge m�glicher Fussg�nger erreicht wurde */
+		/* Ausserdem wird mit einbezogen ob schon die Maximale Menge moeglicher Fussgaenger erreicht wurde */
 		wahrscheinlichkeit = zufallszahl(11);
 		if(wahrscheinlichkeit == 0 && fussgaengerGesamt < MAX_FUSSGAENGER) {
-			/* Zu Fu� kommen nur soviele G�ste, dass die maximale */
-			/* Auslastung des Schwimmbads nicht �berschritten werden kann */
+			/* Zu Fuss kommen nur soviele Gaeste, dass die maximale */
+			/* Auslastung des Schwimmbads nicht ueberschritten werden kann */
 			if(badegaesteAktuelleMenge <= (MAX_AUSLASTUNG - 1)) {
 				zuFussAnreise(simMinute);
 			}
@@ -218,9 +218,9 @@ void anreise(int simMinute) {
 	}
 }
 
-/* Funktion zur Generieren der Anzahl der Fahrg�ste im Bus */
+/* Funktion zur Generieren der Anzahl der Fahrgaeste im Bus */
 void busAnreise(int simMinute) {
-	/* Je nach Uhrzeit bringt der Bus mehr oder weniger G�ste */
+	/* Je nach Uhrzeit bringt der Bus mehr oder weniger Gaeste */
 	/* Maximal 50 in den Zeiten von 11:00 Uhr und 16:00 Uhr */
 	if(simMinute < 60) busFahrgaeste = zufallszahl(10) + 10;
 	if(simMinute >= 60 && simMinute < 90) busFahrgaeste = zufallszahl(10) + 20;
@@ -231,9 +231,9 @@ void busAnreise(int simMinute) {
 	if(simMinute >= 480 && simMinute < 510) busFahrgaeste = zufallszahl(10) + 10;
 }
 
-/* Funktion zur Generierung der Anzahl der im Auto anreisenden Badeg�ste */
+/* Funktion zur Generierung der Anzahl der im Auto anreisenden Badegaeste */
 void autoAnreise(int simMinute){
-	/* Je nach Uhrzeit kommen mehr oder weniger G�ste mit dem Auto */
+	/* Je nach Uhrzeit kommen mehr oder weniger Gaeste mit dem Auto */
 	/* Maximal 5 in den Zeiten von 11:00 Uhr und 16:00 Uhr */
 	if(simMinute >= 60 && simMinute < 90) autoBelegung = zufallszahl(1) + 2;
 	if(simMinute >= 90 && simMinute < 120) autoBelegung = zufallszahl(1) + 3;
@@ -243,29 +243,29 @@ void autoAnreise(int simMinute){
 	if(simMinute >= 480 && simMinute < 570) autoBelegung = zufallszahl(1) + 1;
 }
 
-/* Funktion der zu Fuss anreisenden Badeg�ste */
+/* Funktion der zu Fuss anreisenden Badegaeste */
 void zuFussAnreise(int simMinute){
-	/* Fussg�nger kommen je nach belieben */
+	/* Fussgaenger kommen je nach belieben */
 	if(simMinute < 570) {
 		fussgaengerJa++;
 		fussgaengerGesamt++;
 	}
 }
 
-/* Funktion f�gt die angereisten Personen den Badeg�sten hinzu */
+/* Funktion fuegt die angereisten Personen den Badegaesten hinzu */
 void badegaesteEinlass(int simMinute) {
 	int kartenTyp;
 	
-	/* F�r jeden angereisten Gast wird die badegastHinzuf�gen Funktion aufgerufen */
+	/* Fuer jeden angereisten Gast wird die badegastHinzufuegen Funktion aufgerufen */
 	/* und ihr die Anreisezeit, den Anreisetyp sowie die gekaufte Karte mitgegeben */
 	
-	/* Busg�ste erhalten Anreisetyp 0 */
+	/* Busgaeste erhalten Anreisetyp 0 */
 	for(; busFahrgaeste > 0; busFahrgaeste--) {
 		kartenTyp = eintrittskarteKaufen(1);
 		badegastHinzufuegen(simMinute, 0, kartenTyp);
 	}
 	
-	/* Kommen Badeg�ste mit dem Auto wird ein Parkplatz belegt, */
+	/* Kommen Badegaeste mit dem Auto wird ein Parkplatz belegt, */
 	/* alle erhalten die gleiche Karte und Anreisetyp 1 */
 	if(autoBelegung > 0) {
 		kartenTyp = eintrittskarteKaufen(autoBelegung);
@@ -275,18 +275,18 @@ void badegaesteEinlass(int simMinute) {
 		}
 	}
 	
-	/* Fussg�nger erhalten den Anreisetyp 2 */
+	/* Fussgaenger erhalten den Anreisetyp 2 */
 	for(; fussgaengerJa > 0; fussgaengerJa--) {
 		kartenTyp = eintrittskarteKaufen(1);
 		badegastHinzufuegen(simMinute, 2, kartenTyp);
 	}
 }
 
-/* Funktion ermittelt welche Eintrittskarte die G�ste kaufen */
+/* Funktion ermittelt welche Eintrittskarte die Gaeste kaufen */
 int eintrittskarteKaufen(int menge) {
 	int wahrscheinlichkeit;
 	
-	/* Es besteht eine Wahrscheinlichkeit von 1:5 f�r Tageskarte/2H-Karte */
+	/* Es besteht eine Wahrscheinlichkeit von 1:5 fuer Tageskarte/2H-Karte */
 	wahrscheinlichkeit = zufallszahl(6);
 	/* Tageskarten haben den Wert 300 zugeordnet */
 	if(wahrscheinlichkeit == 0) {
@@ -300,25 +300,25 @@ int eintrittskarteKaufen(int menge) {
 	}
 }
 
-/* Funktion sorgt daf�r das alle G�ste die l�nger bleiben als ihre Karte g�ltig ist, ihre Karte verl�ngern */
+/* Funktion sorgt dafuer das alle Gaeste die laenger bleiben als ihre Karte gueltig ist, ihre Karte verlaengern */
 void eintrittskarteVerlaengern(int simMinute) {
 	int vergangeneZeit;
 	
 	badegastAktuell = badegastAnfang;
 	
-	/* Schleife l�uft einmal durch alle Badeg�ste */
+	/* Schleife laeuft einmal durch alle Badegaeste */
 	while(badegastAktuell != NULL) {
 		
-		/* Wenn der Gast keine Tageskarte(300) hat wird gepr�ft ob er verl�ngern muss */
+		/* Wenn der Gast keine Tageskarte(300) hat wird geprueft ob er verlaengern muss */
 		if(badegastAktuell->kartenTyp != 300) {
 			
 			/* Ermittelt die seit betreten des Schwimmbads vergangene Zeit */
 			vergangeneZeit = simMinute - badegastAktuell->ankunftsZeit;
 			
-			/* Es wird gepr�ft ob die Aktuelle Karte abgelaufen ist */
+			/* Es wird geprueft ob die Aktuelle Karte abgelaufen ist */
 			if(badegastAktuell->kartenTyp < vergangeneZeit) {
 				
-				/* Ist die Karte abgelaufen werden die jeweiligen Z�hler f�r die Ausgabe angepasst */
+				/* Ist die Karte abgelaufen werden die jeweiligen Zaehler fuer die Ausgabe angepasst */
 				switch(badegastAktuell->kartenTyp) {
 					case 120: {
 						zweiStundenkarte--;
@@ -342,7 +342,7 @@ void eintrittskarteVerlaengern(int simMinute) {
 			}
 		}
 		
-		/* Anschlie�end wird zum n�chsten Badegast gewechselt */
+		/* Anschliessend wird zum naechsten Badegast gewechselt */
 		badegastAktuell = badegastAktuell->danach;
 	}
 }
@@ -355,7 +355,7 @@ int gehenOderBleiben(int simMinute) {
 	
 	/* Ist der Badegast gerade nicht auf der Rutsche oder einer Liege kann er sich entscheiden zu gehen */
 	if(badegastAktuell->ereignisTyp == 0) {
-		/* Der Vergleichwert f�r die Wahrscheinlichkeit das ein Gast geht steigt mit fortschreitender Stunde */
+		/* Der Vergleichwert fuer die Wahrscheinlichkeit das ein Gast geht steigt mit fortschreitender Stunde */
 		if(simMinute <= 420) vergleichswert = badegastAktuell->kartenTyp - 15;
 		if(simMinute > 420) vergleichswert = badegastAktuell->kartenTyp - 30;
 		if(simMinute > 480) vergleichswert = badegastAktuell->kartenTyp - 45;
@@ -364,19 +364,19 @@ int gehenOderBleiben(int simMinute) {
 		/* Es wird eine Zufallszahl bestimmt die maximal der Verweildauer des Badegastes entspricht */
 		wahrscheinlichkeit = zufallszahl(simMinute - badegastAktuell->ankunftsZeit + 1);
 		
-		/* Da Badeg�ste, die mit dem Bus kamen, bedenken haben das der letzte Bus zu voll werden k�nnte */
-		/* entscheiden sich alle schon daf�r zum vorletzten Bus an die Haltestelle zu gehen */
+		/* Da Badegaeste, die mit dem Bus kamen, bedenken haben das der letzte Bus zu voll werden koennte */
+		/* entscheiden sich alle schon dafuer zum vorletzten Bus an die Haltestelle zu gehen */
 		if(simMinute == 593 && badegastAktuell->ankunftsTyp == 0) {
 			entscheidung = 1;
 		}
 		
-		/* Wenn das Schwimmbad schlie�t entscheiden sich auch die letzten G�ste daf�r zu gehen */
+		/* Wenn das Schwimmbad schliesst entscheiden sich auch die letzten Gaeste dafuer zu gehen */
 		else if(simMinute == 660) {
 			entscheidung = 1;
 		}
 		
 		/* Ansonsten wird im Tagesverlauf einfach der Wahrscheinlichkeitswert mit dem Vergleichswert abgeglichen */
-		/* Ist die Wahrscheinlichkeit h�her als der Vergleichswert, entscheidet sich der Badegast daf�r zu gehen */
+		/* Ist die Wahrscheinlichkeit hoeher als der Vergleichswert, entscheidet sich der Badegast dafuer zu gehen */
 		else {
 			entscheidung = (wahrscheinlichkeit > vergleichswert) ? 1 : 0;
 		}
@@ -388,44 +388,44 @@ int gehenOderBleiben(int simMinute) {
 	return entscheidung;
 }
 
-/* Funktion simuliert die Abreise der Badeg�ste */
+/* Funktion simuliert die Abreise der Badegaeste */
 void abreise(int simMinute) {
 	int ankunftsZeit;
 	
 	badegastAktuell = badegastAnfang;
 	
-	/* Schleife l�uft einmal durch alle Badeg�ste */
+	/* Schleife laeuft einmal durch alle Badegaeste */
 	while(badegastAktuell != NULL) {
 		
-		/* Die Wahrscheinlichkeit dass ein Gast gehen m�chte wird von der gehenOderBleiben Funktion ermittelt */
+		/* Die Wahrscheinlichkeit dass ein Gast gehen moechte wird von der gehenOderBleiben Funktion ermittelt */
 		if(gehenOderBleiben(simMinute)) {
 			
-			/* G�ste die mit dem Bus kamen, gehen zur�ck zur Bushaltestelle */
+			/* Gaeste die mit dem Bus kamen, gehen zurueck zur Bushaltestelle */
 			if(badegastAktuell->ankunftsTyp == 0) {
 				busHaltestelle++;
 				badegastFreilassen();
 				badegaesteAktuelleMenge--;
 			}
 			
-			/* G�ste die mit dem selben Auto kamen, gehen gemeinsam und machen einen Parkplatz frei */
-			/* Daf�r wird die Ankunftszeit zwischengespeichert und mit den anderen G�sten abgeglichen */
+			/* Gaeste die mit dem selben Auto kamen, gehen gemeinsam und machen einen Parkplatz frei */
+			/* Dafuer wird die Ankunftszeit zwischengespeichert und mit den anderen Gaesten abgeglichen */
 			else if(badegastAktuell->ankunftsTyp == 1) {
 				ankunftsZeit = badegastAktuell->ankunftsZeit;
 				if(autoParkplatz > 0) {
 					autoParkplatz--;
 				}
 				
-				/* Hat sich ein Gast der mit Auto kam dazu entschieden zu gehen, wird anhand des Ankunfttyps und der Ankunftszeit gepr�ft ob vor ihm in */
-				/* der Liste Mitfahrer sind und die Liste zur�ckgelaufen. Da nur ein Auto pro Minute auf dem Parkplatz erscheint ist der Abgleich eindeutig */
+				/* Hat sich ein Gast der mit Auto kam dazu entschieden zu gehen, wird anhand des Ankunfttyps und der Ankunftszeit geprueft ob vor ihm in */
+				/* der Liste Mitfahrer sind und die Liste zurueckgelaufen. Da nur ein Auto pro Minute auf dem Parkplatz erscheint ist der Abgleich eindeutig */
 				while(badegastAktuell->davor != NULL && (badegastAktuell->davor)->ankunftsTyp == 1 && (badegastAktuell->davor)->ankunftsZeit == ankunftsZeit) {
 					badegastAktuell = badegastAktuell->davor;
 				}
 				
-				/* Beim ersten Mitfahrer angekommen l�uft die Schleife in der Liste wieder vorw�rts */
+				/* Beim ersten Mitfahrer angekommen laeuft die Schleife in der Liste wieder vorwaerts */
 				while(badegastAktuell != NULL) {
 					
-					/* Geh�rt der Aktuelle Badegast zum jeweiligen Auto wird er aus der Liste entfernt, ansonsten wird die Schleife abgebrochen */
-					/* Das ist wichtig da durch das entfernen des ersten Elements in der Liste die Schleife schon auf einem Gast stehen k�nnte der nicht zum Auto geh�rt */
+					/* Gehoert der Aktuelle Badegast zum jeweiligen Auto wird er aus der Liste entfernt, ansonsten wird die Schleife abgebrochen */
+					/* Das ist wichtig da durch das entfernen des ersten Elements in der Liste die Schleife schon auf einem Gast stehen koennte der nicht zum Auto gehoert */
 					if(badegastAktuell->ankunftsTyp == 1 && badegastAktuell->ankunftsZeit == ankunftsZeit) {
 						
 						/* Lag der Gast gerade auf einer Liege wird die Liege wieder frei */
@@ -440,7 +440,7 @@ void abreise(int simMinute) {
 					}
 					
 					/* Sollte der entfernte Badegast der erste in der Liste gewesen sein, wird kein Element weiter gesprungen da durch das entfernen schon der */
-					/* n�chste Badegast ausgew�hlt ist. Ist der Aktuelle Badegast nicht der Anfang wird noch gepr�ft ob der n�chste Badegast zu dem Auto geh�rt */
+					/* naechste Badegast ausgewaehlt ist. Ist der Aktuelle Badegast nicht der Anfang wird noch geprueft ob der naechste Badegast zu dem Auto gehoert */
 					if(badegastAktuell != badegastAnfang) {
 						if(badegastAktuell->danach != NULL && (badegastAktuell->danach)->ankunftsTyp == 1 && (badegastAktuell->danach)->ankunftsZeit == ankunftsZeit) {
 							badegastAktuell = badegastAktuell->danach;
@@ -449,37 +449,37 @@ void abreise(int simMinute) {
 				}
 			}
 			
-			/* Fussg�nger gehen direkt nach Hause */
+			/* Fussgaenger gehen direkt nach Hause */
 			else if(badegastAktuell->ankunftsTyp == 2) {
 				badegastFreilassen();
 				badegaesteAktuelleMenge--;
 			}
 			
-			/* Auch hier wird gepr�ft ob der Anktuelle Badegast auf dem Anfang steht */
-			/* Wenn ja wurde der urspr�ngliche Anfang entfernt und das n�chste Element ist schon ausgew�hlt */
+			/* Auch hier wird geprueft ob der Anktuelle Badegast auf dem Anfang steht */
+			/* Wenn ja wurde der urspruengliche Anfang entfernt und das naechste Element ist schon ausgewaehlt */
 			if(badegastAktuell != badegastAnfang) {
 				badegastAktuell = badegastAktuell->danach;
 			}
 		}
 		
-		/* Hat sich der Aktuelle Gast nicht dazu entschieden zu gehen wird einfach zum n�chsten Gast weitergegangen */
+		/* Hat sich der Aktuelle Gast nicht dazu entschieden zu gehen wird einfach zum naechsten Gast weitergegangen */
 		else {
 			badegastAktuell = badegastAktuell->danach;
 		}
 	}
 }
 
-/* Funktion bestimmt wo sich der Bus befindet und nimmt zu den jeweiligen Zeiten die Fahrg�ste mit */
+/* Funktion bestimmt wo sich der Bus befindet und nimmt zu den jeweiligen Zeiten die Fahrgaeste mit */
 void busHaltestellenVerwaltung(int simMinute) {
 	
-	/* �bergibt je nach Uhrzeit den aktuellen Zustand vom Bus */
+	/* Uebergibt je nach Uhrzeit den aktuellen Zustand vom Bus */
 	busZustand = 1;
 	if(((simMinute - 20) % 30 == 0 && simMinute <= 610) || simMinute == 610) busZustand = 2;
 	if(((simMinute - 21) % 30 == 0 && simMinute <= 611) || simMinute == 611) busZustand = 3;
 	if(((simMinute - 22) % 30 == 0 && simMinute <= 612) || simMinute == 612) busZustand = 3;
 	if(((simMinute - 23) % 30 == 0 && simMinute <= 613) || simMinute == 613) busZustand = 4;
 	
-	/* l�sst aller 30 Minuten maximal 50 Personen mit dem Bus abholen, letzte Runde 19:13 Uhr */
+	/* laesst aller 30 Minuten maximal 50 Personen mit dem Bus abholen, letzte Runde 19:13 Uhr */
 	if(((simMinute - 23) % 30 == 0 && simMinute <= 613) || simMinute == 613) {
 		if(busHaltestelle > MAX_BUS) {
 			busHaltestelle -= 50;
@@ -490,21 +490,21 @@ void busHaltestellenVerwaltung(int simMinute) {
 	}
 }
 
-/* Funktion f�gt die eingelassenen Badeg�ste zur Liste der Badeg�ste hinzu */
+/* Funktion fuegt die eingelassenen Badeg�ste zur Liste der Badegaeste hinzu */
 int badegastHinzufuegen(int simMinute, int ankunftsTyp, int kartenTyp) {
 	
-	/* Reserviert Speicher f�r einen neuen Badegasteintrag */
+	/* Reserviert Speicher fuer einen neuen Badegasteintrag */
 	if(!(badegastAktuell = (Badegast* ) malloc(sizeof(Badegast)))) {
 		/* Hier folgt die Fehlerbehandlung */
 		fehler = 2;
 		return 0;
 	}
 	
-	/* Erh�ht die Z�hler f�r die aktuelle Auslastung und die Gesamtg�stemenge */
+	/* Erhoeht die Zaehler fuer die aktuelle Auslastung und die Gesamtgaestemenge */
 	badegaesteGesamtMenge++;
 	badegaesteAktuelleMenge++;
 	
-	/* �bergibt die Startwerte dem Badegasteintrag */
+	/* Uebergibt die Startwerte dem Badegasteintrag */
 	badegastAktuell->index = badegaesteGesamtMenge;
 	badegastAktuell->ankunftsZeit = simMinute;
 	badegastAktuell->ankunftsTyp = ankunftsTyp;
@@ -514,7 +514,7 @@ int badegastHinzufuegen(int simMinute, int ankunftsTyp, int kartenTyp) {
 	badegastAktuell->davor = badegastEnde;
 	badegastAktuell->danach = NULL;
 	
-	/* H�ngt den Badegast ans Ende der Liste */
+	/* Haengt den Badegast ans Ende der Liste */
 	if(badegastAnfang == NULL) {
 		badegastAnfang = badegastAktuell;
 	}
@@ -526,11 +526,11 @@ int badegastHinzufuegen(int simMinute, int ankunftsTyp, int kartenTyp) {
 	return 0;
 }
 
-/* Funktion l�scht den aktuellen Badegast aus der doppelt verketteten Liste */
+/* Funktion loescht den aktuellen Badegast aus der doppelt verketteten Liste */
 void badegastFreilassen() {	
 	Badegast *hilfsZeiger = NULL;
 	
-	/* Ist �berhaupt ein Element in der Liste */
+	/* Ist ueberhaupt ein Element in der Liste */
 	if(badegastAnfang != NULL) {
 			
 		/* Ist das Element der Anfang */
@@ -544,7 +544,7 @@ void badegastFreilassen() {
 				badegastEnde = NULL;
 			}
 			
-			/* Ansonsten Anfang freigeben und aktuell aufs n�chste Element setzen */
+			/* Ansonsten Anfang freigeben und aktuell aufs naechste Element setzen */
 			else {
 				badegastAktuell->davor = NULL;
 				free(badegastAnfang);
@@ -572,24 +572,24 @@ void badegastFreilassen() {
 	}
 }
 
-/* Funktion ermittelt ob ein Badegast ein bestimmtes Ereignis erh�lt */
+/* Funktion ermittelt ob ein Badegast ein bestimmtes Ereignis erhaelt */
 void ereignisWahl(int simMinute) {
 	int wahrscheinlichkeit, ereignis;
 	int liegeZeit;
 	
-	/* Ist �berhaupt ein Element in der Liste */
+	/* Ist ueberhaupt ein Element in der Liste */
 	if(badegastAnfang != NULL) {
 		
-		/* Eine halbe Stunde vor Schlie�ung des Schwimmbads beginnt das Personal die Liegen */
-		/* abzuwischen und nur noch die schon an der Rutsche anstehenden Badeg�ste durchzuwinken */
+		/* Eine halbe Stunde vor Schliessung des Schwimmbads beginnt das Personal die Liegen */
+		/* abzuwischen und nur noch die schon an der Rutsche anstehenden Badegaeste durchzuwinken */
 		if(simMinute <= 630) {
 			badegastAktuell = badegastAnfang;
 	
-			/* Schleife l�uft einmal �ber alle Badeg�ste */
+			/* Schleife laeuft einmal ueber alle Badegaeste */
 			while(badegastAktuell != NULL) {
 				
-				/* G�ste die mit dem Bus fahren m�ssen wollen ab 18:30 Uhr kein */
-				/* Ereignis mehr antreten damit sie p�nktlich zu ihrem Bus kommen */
+				/* Gaeste die mit dem Bus fahren muessen wollen ab 18:30 Uhr kein */
+				/* Ereignis mehr antreten damit sie puenktlich zu ihrem Bus kommen */
 				if(badegastAktuell->ankunftsTyp == 0 && simMinute >= 570) {
 					return;
 				}
@@ -612,7 +612,7 @@ void ereignisWahl(int simMinute) {
 							return;
 						}
 						
-						/* Ist eine Liege frei wird eine zuf�llige Liegedauer */
+						/* Ist eine Liege frei wird eine zufaellige Liegedauer */
 						/* 10-30 Minuten(600-1800 Sekunden) bestimmt und zugewiesen */
 						else if(ereignis == 1) {
 							liegeZeit = zufallszahl(1200) + 600;
@@ -629,7 +629,7 @@ void ereignisWahl(int simMinute) {
 					}
 				}
 				
-			/* Anschlie�end geht die Schleife weiter zum n�chsten Gast */
+			/* Anschliessend geht die Schleife weiter zum naechsten Gast */
 			badegastAktuell = badegastAktuell->danach;	
 			}
 		}
@@ -637,7 +637,7 @@ void ereignisWahl(int simMinute) {
 }
 
 /*++++++++++++++++++++++++++++++++++++++++++++++*/
-/* �bergangsfunktion zum beenden der Ereignisse */
+/* Uebergangsfunktion zum beenden der Ereignisse */
 void ereignisAblauf() {
 	if(badegastAnfang != NULL) {
 		badegastAktuell = badegastAnfang;
@@ -657,20 +657,20 @@ void ereignisAblauf() {
 	}
 }
 
-/* Funktion l�sst die G�ste f�r eine bestimmte Zeit auf den Liegen verweilen */
+/* Funktion laesst die Gaeste fuer eine bestimmte Zeit auf den Liegen verweilen */
 void liegenAblauf() {
 	
-	/* Ist �berhaupt ein Element in der Liste */
+	/* Ist ueberhaupt ein Element in der Liste */
 	if(badegastAnfang != NULL) {
 		badegastAktuell = badegastAnfang;
 		
-		/* Schleife l�uft einmal �ber alle Badeg�ste */
+		/* Schleife laeuft einmal ueber alle Badegaeste */
 		while(badegastAktuell != NULL) {
 			
-			/* Pr�ft ob der Gast auf einer Liege liegt */
+			/* Prueft ob der Gast auf einer Liege liegt */
 			if(badegastAktuell->ereignisTyp == 1) {
 				
-				/* Pr�ft ob er noch verbleibende Liegezeit hat, wenn ja wird eine Sekunde */
+				/* Prueft ob er noch verbleibende Liegezeit hat, wenn ja wird eine Sekunde */
 				/* abgezogen wen nicht wird der Ereignistyp wieder auf 0 gesetzt */
 				if(badegastAktuell->ereignisZeit > 0) {
 					badegastAktuell->ereignisZeit -= 1;
@@ -681,13 +681,13 @@ void liegenAblauf() {
 				}
 			}
 			
-			/* Anschlie�end geht die Schleife weiter zum n�chsten Gast */
+			/* Anschliessend geht die Schleife weiter zum naechsten Gast */
 			badegastAktuell = badegastAktuell->danach;
 		}
 	}
 }
 
-/* Funktion l�sst die Badeg�ste ein Becken ausw�hlen */
+/* Funktion laesst die Badegaeste ein Becken auswaehlen */
 void schwimmbeckenWahl() {
 	int auswahl, wahrscheinlichkeit;
 	
@@ -698,13 +698,13 @@ void schwimmbeckenWahl() {
 	
 	badegastAktuell = badegastAnfang;
 	
-	/* Schleife l�uft einmal �ber alle Badeg�ste */
+	/* Schleife laeuft einmal ueber alle Badegaeste */
 	while(badegastAktuell != NULL) {
 		
 		/* Wenn der Badegast noch keinem anderen Ereignis zugeordnet ist, sucht er sich ein Becken aus */
 		if(badegastAktuell->ereignisTyp == 0) {
 			
-			/* Die Gesamtkapazit�t der Becken (350) wurde durch 25 geteilt */
+			/* Die Gesamtkapazitaet der Becken (350) wurde durch 25 geteilt */
 			/* Davon wird eine Zufallszahl generiert */
 			wahrscheinlichkeit = zufallszahl(MAX_AUSLASTUNG / 25);
 			
@@ -723,7 +723,7 @@ void schwimmbeckenWahl() {
 				auswahl = 1;
 			}
 			
-			/* Anschlie�end wird die Auswahl auf die Vordefinierten Becken gelegt und der Z�hler erh�ht */
+			/* Anschliessend wird die Auswahl auf die Vordefinierten Becken gelegt und der Zaehler erhoeht */
 			/* Ist ein Becken schon voll geht der Switch in den Default-Fall bis der Gast ein freies Becken findet */
 			switch(auswahl) {
 				case 0: if(kinderbecken < MAX_KINDERBECKEN) kinderbecken++; break;
@@ -749,7 +749,7 @@ void schwimmbeckenWahl() {
 			}
 		}
 		
-	/* Anschlie�end geht die Schleife weiter zum n�chsten Gast */
+	/* Anschliessend geht die Schleife weiter zum naechsten Gast */
 	badegastAktuell = badegastAktuell->danach;	
 	}
 }
@@ -766,7 +766,7 @@ void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit) {
 	char stopPause = '\0';
 	int pauseZaehler = 0;
 	
-	/* _kbhit() pr�ft ob eine Taste gedr�ckt wurde */
+	/* _kbhit() prueft ob eine Taste gedrueckt wurde */
 	/* _getch() liest die Taste sofort ohne Eingabetaste */
 	if(_kbhit()) {
 		eingabe = _getch();
@@ -786,11 +786,11 @@ void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit) {
 			}
 		}
 		
-		/* Pausiert die Simulation bis zum erneuten dr�cken der P-Taste */
+		/* Pausiert die Simulation bis zum erneuten druecken der P-Taste */
 		if(eingabe == 'P' || eingabe == 'p') {
 			while(stopPause != 'P' && stopPause != 'p') {
 				
-				/* _kbhit() pr�ft ob eine Taste gedr�ckt wurde */
+				/* _kbhit() prueft ob eine Taste gedrueckt wurde */
 				/* _getch() liest die Taste sofort ohne Eingabetaste */
 				if(_kbhit()) {
 					stopPause = _getch();
@@ -818,7 +818,7 @@ void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit) {
 				printf("\nWeiter durch ...(P)ause druecken");
 				Sleep(500);
 								
-				/* Wird E eingegeben, wird die Pause unterbrochen und das Programm beendet sich im n�chsten Schritt */				
+				/* Wird E eingegeben, wird die Pause unterbrochen und das Programm beendet sich im naechsten Schritt */				
 				if(stopPause == 'e' || stopPause == 'E') {
 					break;
 				}
@@ -829,7 +829,7 @@ void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit) {
 		if(eingabe == 'e' || eingabe == 'E' || stopPause == 'e' || stopPause == 'E') {
 			badegastAktuell = badegastAnfang;
 			
-			/* Der reservierte Speicher f�r die Elemente der doppelt Verkettetn Liste wird wieder freigegeben */
+			/* Der reservierte Speicher fuer die Elemente der doppelt Verkettetn Liste wird wieder freigegeben */
 			if(badegastAnfang != NULL) {
 				while(badegastAktuell != NULL) {	
 				badegastAktuell = badegastAktuell->danach;
@@ -838,11 +838,11 @@ void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit) {
 				}
 				badegastEnde = NULL;
 			}
-			/* Anschlie�end wird das Programm beendet */
+			/* Anschliessend wird das Programm beendet */
 			exit(0);
 		}
 		
-		/* Pr�ft ob die Eingabe mit einem Zeichen der erlaubtenEingabe �bereinstimmt, wenn nicht wird darauf hingewiesen */
+		/* Prueft ob die Eingabe mit einem Zeichen der erlaubtenEingabe uebereinstimmt, wenn nicht wird darauf hingewiesen */
 		if(strchr(erlaubteEingabe, eingabe) == NULL) {
 			fehler = 1;
 		}
@@ -874,9 +874,9 @@ void ausgabeVerarbeitung(int simMinute) {
 	printf("\n(H): %-3d", busHaltestelle);
 	printf("%*s%-3d", 28, "", kinderbecken);	/* Kinder */
 	printf("%*s%-3d", 19, "", schwimmerbecken);	/* Schwimmer */
-	printf("%*s%-3d", 22, "", aussenbecken);	/* Au�en */
+	printf("%*s%-3d", 22, "", aussenbecken);	/* Aussen */
 	
-	/* pr�ft wo sich der Bus befindet und macht die entsprechende Ausgabe */
+	/* prueft wo sich der Bus befindet und macht die entsprechende Ausgabe */
 	switch(busZustand) {
 		case 1: printf("\nBus: Unterwegs"); break;
 		case 2: printf("\nBus: Ankunft"); break;
@@ -886,7 +886,7 @@ void ausgabeVerarbeitung(int simMinute) {
 	}
 	
 	/* Zeigt die simulierte Stunde an */
-	/* Unter 10 Stunden wird eine 0 erg�nzt */
+	/* Unter 10 Stunden wird eine 0 ergaenzt */
 	if(((simMinute / 60) + 9) < 10){
 		printf("\n\n0%d:", (simMinute / 60) + 9);
 	}
@@ -895,7 +895,7 @@ void ausgabeVerarbeitung(int simMinute) {
 	}
 	
 	/* Zeigt die simulierte Minute an */
-	/* Unter 10 Minuten wird eine 0 erg�nzt */
+	/* Unter 10 Minuten wird eine 0 ergaenzt */
 	if((simMinute % 60) < 10){
 		printf("0%d Uhr", simMinute % 60);
 	}
@@ -914,8 +914,8 @@ void ausgabeVerarbeitung(int simMinute) {
 void fehlerAusgabe() {
 	switch(fehler) {
 		case 1: printf("\n\nKeine Gueltige Eingabe"); break;
-		case 2: printf("\n\nDatensatz f�r einen weiteren Badegast konnte nicht angelegt werden."); break;
-		case 3: printf("Die Maximalbelastung aller Becken wurde �berstiegen!"); break;
+		case 2: printf("\n\nDatensatz fuer einen weiteren Badegast konnte nicht angelegt werden."); break;
+		case 3: printf("Die Maximalbelastung aller Becken wurde ueberstiegen!"); break;
 	}
 	fehler = 0;
 }
