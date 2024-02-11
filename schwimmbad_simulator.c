@@ -372,7 +372,7 @@ int gehenOderBleiben(int simMinute) {
 		
 		/* Da Badegaeste, die mit dem Bus kamen, bedenken haben das der letzte Bus zu voll werden koennte */
 		/* entscheiden sich alle schon dafuer zum vorletzten Bus an die Haltestelle zu gehen */
-		if(simMinute == 593 && badegastAktuell->ankunftsTyp == 0) {
+		if(simMinute >= 593 && badegastAktuell->ankunftsTyp == 0) {
 			entscheidung = 1;
 		}
 		
