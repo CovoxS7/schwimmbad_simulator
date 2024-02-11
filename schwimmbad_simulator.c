@@ -152,7 +152,7 @@ void simulation() {
 			
 			
 			
-				/* L�sst die Zeit auf der Liege ablaufen */
+				/* Laesst die Zeit auf der Liege ablaufen */
 				liegenAblauf();
 				
 				/* Badegaeste suchen sich ein Schwimmbecken raus */
