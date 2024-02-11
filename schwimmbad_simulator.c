@@ -21,6 +21,7 @@
 #define MAX_KINDERBECKEN	50
 #define MAX_SCHWIMMERBECKEN	125
 #define MAX_AUSSENBECKEN	175
+#define MAX_LIEGEN			80
 
 /* Globale Variablen */
 int badegaesteGesamtMenge = 0;
@@ -35,6 +36,7 @@ int zweiStundenkarte = 0;
 int plusEineStunde = 0;
 int plusZweiStunden = 0;
 int tagesKarte = 0;
+int liegenBelegt = 0;
 int kinderbecken = 0;
 int schwimmerbecken = 0;
 int aussenbecken = 0;
@@ -48,6 +50,7 @@ typedef struct Badegast{
 	int ankunftsTyp;		/* 0 = Bus, 1 = Auto, 2 = Fußgänger */
 	int kartenTyp;			/* 120 = 2h, 180 = 1h verl., 240 = 2h verl., 300 = Tageskarte */
 	int ereignisTyp;		/* 0 = Frei, 1 = Liege, 2 = Normal, 3 = Ring */
+	int ereignisZeit;
 	/* Weitere Eigenschaften für einen Badegast hier eintragen */
 	
 	
@@ -75,12 +78,16 @@ void busAbreise(int simMinute);
 int badegastHinzufuegen(int simMinute, int ankunftsTyp, int kartenTyp);
 int badegaesteDurchsuchen();
 void badegastFreilassen();
+void ereignisWahl(int simMinute);
 void schwimmbeckenWahl();
 int zufallszahl(int maximum);
 void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit);
 void ausgabeVerarbeitung(int simMinute);
 
 void fehlerAusgabe();
+
+/* TestFunktion */
+void ereignisAblauf();
 
 /* Hauptfunktion */
 int main(void) {
@@ -122,6 +129,8 @@ void simulation() {
 			/* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 			/* Hier werden die Funktionen aufgerufen die jede Minute ausgeführt werden */
 			
+				/* Lässt die Ereignisse ablaufen */
+				ereignisAblauf();
 			
 			
 			
@@ -137,19 +146,20 @@ void simulation() {
 				/* ------------------------------------------------------------------------ */
 				/* Hier werden die Funktionen aufgerufen die jede Sekunde ausgeführt werden */
 			
+				/* Badegäste entscheiden zufällig ob sie Rutschen gehen */
+				/* oder auf eine Liege oder in einem der Becken bleiben */
+				ereignisWahl(simMinute);
 			
 			
 			
 			
 			
 			
-			
-			
+								
+				/* Badegäste suchen sich ein Schwimmbecken raus */
+				schwimmbeckenWahl();
 				/* ------------------------------------------------------------------------ */
 			}
-					
-			/* Badegäste suchen sich ein Schwimmbecken raus */
-			schwimmbeckenWahl();
 		}
 
 		/* Eingabeverarbeitung */
@@ -341,30 +351,36 @@ int gehenOderBleiben(int simMinute) {
 	int vergleichswert;
 	int entscheidung;
 	
-	/* Der Vergleichwert für die Wahrscheinlichkeit das ein Gast geht steigt mit fortschreitender Stunde */
-	if(simMinute <= 420) vergleichswert = badegastAktuell->kartenTyp - 15;
-	if(simMinute > 420) vergleichswert = badegastAktuell->kartenTyp - 30;
-	if(simMinute > 480) vergleichswert = badegastAktuell->kartenTyp - 45;
-	if(simMinute > 540) vergleichswert = badegastAktuell->kartenTyp - 60;
-	
-	/* Es wird eine Zufallszahl bestimmt die maximal der Verweildauer des Badegastes entspricht */
-	wahrscheinlichkeit = zufallszahl(simMinute - badegastAktuell->ankunftsZeit + 1);
-	
-	/* Da Badegäste, die mit dem Bus kamen, bedenken haben das der letzte Bus zu voll werden könnte */
-	/* entscheiden sich alle schon dafür zum vorletzten Bus an die Haltestelle zu gehen */
-	if(simMinute == 593 && badegastAktuell->ankunftsTyp == 0) {
-		entscheidung = 1;
+	/* Ist der Badegast gerade nicht auf der Rutsche oder einer Liege kann er sich entscheiden zu gehen */
+	if(badegastAktuell->ereignisTyp == 0) {
+		/* Der Vergleichwert für die Wahrscheinlichkeit das ein Gast geht steigt mit fortschreitender Stunde */
+		if(simMinute <= 420) vergleichswert = badegastAktuell->kartenTyp - 15;
+		if(simMinute > 420) vergleichswert = badegastAktuell->kartenTyp - 30;
+		if(simMinute > 480) vergleichswert = badegastAktuell->kartenTyp - 45;
+		if(simMinute > 540) vergleichswert = badegastAktuell->kartenTyp - 60;
+		
+		/* Es wird eine Zufallszahl bestimmt die maximal der Verweildauer des Badegastes entspricht */
+		wahrscheinlichkeit = zufallszahl(simMinute - badegastAktuell->ankunftsZeit + 1);
+		
+		/* Da Badegäste, die mit dem Bus kamen, bedenken haben das der letzte Bus zu voll werden könnte */
+		/* entscheiden sich alle schon dafür zum vorletzten Bus an die Haltestelle zu gehen */
+		if(simMinute == 593 && badegastAktuell->ankunftsTyp == 0) {
+			entscheidung = 1;
+		}
+		
+		/* Wenn das Schwimmbad schließt entscheiden sich auch die letzten Gäste dafür zu gehen */
+		else if(simMinute == 660) {
+			entscheidung = 1;
+		}
+		
+		/* Ansonsten wird im Tagesverlauf einfach der Wahrscheinlichkeitswert mit dem Vergleichswert abgeglichen */
+		/* Ist die Wahrscheinlichkeit höher als der Vergleichswert, entscheidet sich der Badegast dafür zu gehen */
+		else {
+			entscheidung = (wahrscheinlichkeit > vergleichswert) ? 1 : 0;
+		}
 	}
-	
-	/* Wenn das Schwimmbad schließt entscheiden sich auch die letzten Gäste dafür zu gehen */
-	else if(simMinute == 660) {
-		entscheidung = 1;
-	}
-	
-	/* Ansonsten wird im Tagesverlauf einfach der Wahrscheinlichkeitswert mit dem Vergleichswert abgeglichen */
-	/* Ist die Wahrscheinlichkeit höher als der Vergleichswert, entscheidet sich der Badegast dafür zu gehen */
 	else {
-		entscheidung = (wahrscheinlichkeit > vergleichswert) ? 1 : 0;
+		entscheidung = 0;
 	}
 	
 	return entscheidung;
@@ -478,6 +494,7 @@ int badegastHinzufuegen(int simMinute, int ankunftsTyp, int kartenTyp) {
 	badegastAktuell->ankunftsTyp = ankunftsTyp;
 	badegastAktuell->kartenTyp = kartenTyp;
 	badegastAktuell->ereignisTyp = 0;
+	badegastAktuell->ereignisZeit = 0;
 	badegastAktuell->davor = badegastEnde;
 	badegastAktuell->danach = NULL;
 	
@@ -538,6 +555,77 @@ void badegastFreilassen() {
 		}
 	}
 }
+
+/* Funktion ermittelt ob ein Badegast ein bestimmtes Ereignis erhält */
+void ereignisWahl(int simMinute) {
+	int wahrscheinlichkeit, ereignis;
+	
+	/* Ist überhaupt ein Element in der Liste */
+	if(badegastAnfang != NULL) {
+		
+		/* Eine halbe Stunde vor Schließung des Schwimmbads beginnt das Personal die Liegen */
+		/* abzuwischen und nur noch die schon an der Rutsche anstehenden Badegäste durchzuwinken */
+		if(simMinute <= 630) {
+			badegastAktuell = badegastAnfang;
+	
+			/* Schleife läuft einmal über alle Badegäste */
+			while(badegastAktuell != NULL) {
+				
+				/* Gäste die mit dem Bus fahren müssen wollen ab 18:30 Uhr kein */
+				/* Ereignis mehr antreten damit sie pünktlich zu ihrem Bus kommen */
+				if(badegastAktuell->ankunftsTyp == 0 && simMinute >= 570) {
+					return;
+				}
+				else {
+					/* Wenn der Badegast keinem Ereignis (1,2,3) zugeordnet ist besteht */
+					/* eine Wahrscheinlichkeit von 1/1000 dass er ein Ereignis zugeordnet bekommt */
+					if(badegastAktuell->ereignisTyp == 0) {
+						wahrscheinlichkeit = zufallszahl(1001);
+						
+						/* Hat der Badegast ein Ereignis gezogen wird ermittelt welches Ereignis eintritt */
+						if(wahrscheinlichkeit == 0) {
+							ereignis = zufallszahl(3) + 1;
+						}
+						else {
+							ereignis = 0;
+						}
+						
+						/* Sind alle Liegen belegt kann der Gast keine Liege besetzen */
+						if(ereignis == 1 && liegenBelegt >= MAX_LIEGEN) {
+							return;
+						}
+						else {
+							badegastAktuell->ereignisTyp = ereignis;
+							badegastAktuell->ereignisZeit = 10;
+						}
+					}
+				}
+			/* Anschließend geht die Schleife weiter zum nächsten Gast */
+			badegastAktuell = badegastAktuell->danach;	
+			}
+		}
+	}
+}
+
+/*++++++++++++++++++++++++++++++++++++++++++++++*/
+/* Übergangsfunktion zum beenden der Ereignisse */
+void ereignisAblauf() {
+	if(badegastAnfang != NULL) {
+		badegastAktuell = badegastAnfang;
+		
+		while(badegastAktuell != NULL) {
+			if(badegastAktuell->ereignisZeit > 0) {
+				badegastAktuell->ereignisZeit -= 1;
+			}
+			else if(badegastAktuell->ereignisZeit == 0) {
+				badegastAktuell->ereignisTyp = 0;
+			}
+			
+			badegastAktuell = badegastAktuell->danach;
+		}
+	}
+}
+
 
 /* Funktion lässt die Badegäste ein Becken auswählen */
 void schwimmbeckenWahl() {
