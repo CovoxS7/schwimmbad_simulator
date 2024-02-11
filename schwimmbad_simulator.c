@@ -79,6 +79,7 @@ int badegastHinzufuegen(int simMinute, int ankunftsTyp, int kartenTyp);
 int badegaesteDurchsuchen();
 void badegastFreilassen();
 void ereignisWahl(int simMinute);
+void liegenAblauf();
 void schwimmbeckenWahl();
 int zufallszahl(int maximum);
 void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit);
@@ -154,8 +155,9 @@ void simulation() {
 			
 			
 			
-			
-								
+				/* Lässt die Zeit auf der Liege ablaufen */
+				liegenAblauf();
+				
 				/* Badegäste suchen sich ein Schwimmbecken raus */
 				schwimmbeckenWahl();
 				/* ------------------------------------------------------------------------ */
@@ -425,6 +427,11 @@ void abreise(int simMinute) {
 					/* Gehört der Aktuelle Badegast zum jeweiligen Auto wird er aus der Liste entfernt, ansonsten wird die Schleife abgebrochen */
 					/* Das ist wichtig da durch das entfernen des ersten Elements in der Liste die Schleife schon auf einem Gast stehen könnte der nicht zum Auto gehört */
 					if(badegastAktuell->ankunftsTyp == 1 && badegastAktuell->ankunftsZeit == ankunftsZeit) {
+						
+						/* Lag der Gast gerade auf einer Liege wird die Liege wieder frei */
+						if(badegastAktuell->ereignisTyp == 1) {
+							liegenBelegt--;
+						}
 						badegastFreilassen();
 						badegaesteAktuelleMenge--;
 					}
@@ -559,6 +566,7 @@ void badegastFreilassen() {
 /* Funktion ermittelt ob ein Badegast ein bestimmtes Ereignis erhält */
 void ereignisWahl(int simMinute) {
 	int wahrscheinlichkeit, ereignis;
+	int liegeZeit;
 	
 	/* Ist überhaupt ein Element in der Liste */
 	if(badegastAnfang != NULL) {
@@ -594,12 +602,24 @@ void ereignisWahl(int simMinute) {
 						if(ereignis == 1 && liegenBelegt >= MAX_LIEGEN) {
 							return;
 						}
+						
+						/* Ist eine Liege frei wird eine zufällige Liegedauer */
+						/* 10-30 Minuten(600-1800 Sekunden) bestimmt und zugewiesen */
+						else if(ereignis == 1) {
+							liegeZeit = zufallszahl(1200) + 600;
+							badegastAktuell->ereignisTyp = ereignis;
+							badegastAktuell->ereignisZeit = liegeZeit;
+							liegenBelegt++;
+						}
+						
+						/* Ansonsonsten wird ihm ein Rutschereignis zugeordnet */
 						else {
 							badegastAktuell->ereignisTyp = ereignis;
 							badegastAktuell->ereignisZeit = 10;
 						}
 					}
 				}
+				
 			/* Anschließend geht die Schleife weiter zum nächsten Gast */
 			badegastAktuell = badegastAktuell->danach;	
 			}
@@ -612,20 +632,51 @@ void ereignisWahl(int simMinute) {
 void ereignisAblauf() {
 	if(badegastAnfang != NULL) {
 		badegastAktuell = badegastAnfang;
-		
+
 		while(badegastAktuell != NULL) {
-			if(badegastAktuell->ereignisZeit > 0) {
-				badegastAktuell->ereignisZeit -= 1;
+					
+			if(badegastAktuell->ereignisTyp == 2 || badegastAktuell->ereignisTyp == 3) {
+				if(badegastAktuell->ereignisZeit > 0) {
+					badegastAktuell->ereignisZeit -= 1;
+				}
+				else if(badegastAktuell->ereignisZeit == 0) {
+					badegastAktuell->ereignisTyp = 0;
+				}
 			}
-			else if(badegastAktuell->ereignisZeit == 0) {
-				badegastAktuell->ereignisTyp = 0;
-			}
-			
 			badegastAktuell = badegastAktuell->danach;
 		}
 	}
 }
 
+/* Funktion lässt die Gäste für eine bestimmte Zeit auf den Liegen verweilen */
+void liegenAblauf() {
+	
+	/* Ist überhaupt ein Element in der Liste */
+	if(badegastAnfang != NULL) {
+		badegastAktuell = badegastAnfang;
+		
+		/* Schleife läuft einmal über alle Badegäste */
+		while(badegastAktuell != NULL) {
+			
+			/* Prüft ob der Gast auf einer Liege liegt */
+			if(badegastAktuell->ereignisTyp == 1) {
+				
+				/* Prüft ob er noch verbleibende Liegezeit hat, wenn ja wird eine Sekunde */
+				/* abgezogen wen nicht wird der Ereignistyp wieder auf 0 gesetzt */
+				if(badegastAktuell->ereignisZeit > 0) {
+					badegastAktuell->ereignisZeit -= 1;
+				}
+				else if(badegastAktuell->ereignisZeit == 0) {
+					badegastAktuell->ereignisTyp = 0;
+					liegenBelegt--;
+				}
+			}
+			
+			/* Anschließend geht die Schleife weiter zum nächsten Gast */
+			badegastAktuell = badegastAktuell->danach;
+		}
+	}
+}
 
 /* Funktion lässt die Badegäste ein Becken auswählen */
 void schwimmbeckenWahl() {
@@ -805,8 +856,7 @@ void ausgabeVerarbeitung(int simMinute) {
 	printf("%*sauf Treppe: %*s%3d", 17, "", 7, "", 0);
 	printf("\nRutschennutzungen: %9d", 0);
 	printf("%*sRinge im Automaten: %2d", 40, "", 0);
-	printf("\n\nBistro: %2d/20", 0);
-	printf("\nLiegen: %2d/80", 0);
+	printf("\n\nLiegen: %2d/80", liegenBelegt);
 	printf("%*sBecken", 46, "");
 	printf("\n\n(H): %3d", busHaltestelle);
 	printf("%*sKinder", 28, "");
