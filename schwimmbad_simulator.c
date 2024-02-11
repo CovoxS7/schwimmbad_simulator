@@ -52,6 +52,7 @@ typedef struct Badegast{
 	int kartenTyp;			/* 120 = 2h, 180 = 1h verl., 240 = 2h verl., 300 = Tageskarte */
 	int ereignisTyp;		/* 0 = Frei, 1 = Liege, 2 = Normal, 3 = Ring */
 	int ereignisZeit;
+	int willGehen;
 	/* Weitere Eigenschaften fuer einen Badegast hier eintragen */
 	
 	
@@ -353,8 +354,13 @@ int gehenOderBleiben(int simMinute) {
 	int vergleichswert;
 	int entscheidung;
 	
+	/* Der Badegast hat sich schon vorher entschieden zu gehen und wartet nur auf seine Mitfahrer */
+	if(badegastAktuell->willGehen == 1) {
+		entscheidung = 1;
+	}
+	
 	/* Ist der Badegast gerade nicht auf der Rutsche oder einer Liege kann er sich entscheiden zu gehen */
-	if(badegastAktuell->ereignisTyp == 0) {
+	else if(badegastAktuell->ereignisTyp == 0) {
 		/* Der Vergleichwert fuer die Wahrscheinlichkeit das ein Gast geht steigt mit fortschreitender Stunde */
 		if(simMinute <= 420) vergleichswert = badegastAktuell->kartenTyp - 15;
 		if(simMinute > 420) vergleichswert = badegastAktuell->kartenTyp - 30;
@@ -391,6 +397,7 @@ int gehenOderBleiben(int simMinute) {
 /* Funktion simuliert die Abreise der Badegaeste */
 void abreise(int simMinute) {
 	int ankunftsZeit;
+	int mitfahrerBereit;
 	
 	badegastAktuell = badegastAnfang;
 	
@@ -409,41 +416,63 @@ void abreise(int simMinute) {
 			
 			/* Gaeste die mit dem selben Auto kamen, gehen gemeinsam und machen einen Parkplatz frei */
 			/* Dafuer wird die Ankunftszeit zwischengespeichert und mit den anderen Gaesten abgeglichen */
+			/* Auserdem wird ueberprueft ob alle Mitfahrer schon bereit sind zu gehen oder noch auf Rutsche oder Liege sind */
 			else if(badegastAktuell->ankunftsTyp == 1) {
 				ankunftsZeit = badegastAktuell->ankunftsZeit;
-				if(autoParkplatz > 0) {
-					autoParkplatz--;
-				}
+				mitfahrerBereit = 1;
 				
-				/* Hat sich ein Gast der mit Auto kam dazu entschieden zu gehen, wird anhand des Ankunfttyps und der Ankunftszeit geprueft ob vor ihm in */
+				/* Hat sich ein Gast der mit Auto kam dazu entschieden zu gehen, wird anhand des Ankunfttyps und der Ankunftszeit geprueft ob hinter ihm in */
 				/* der Liste Mitfahrer sind und die Liste zurueckgelaufen. Da nur ein Auto pro Minute auf dem Parkplatz erscheint ist der Abgleich eindeutig */
 				while(badegastAktuell->davor != NULL && (badegastAktuell->davor)->ankunftsTyp == 1 && (badegastAktuell->davor)->ankunftsZeit == ankunftsZeit) {
 					badegastAktuell = badegastAktuell->davor;
 				}
 				
-				/* Beim ersten Mitfahrer angekommen laeuft die Schleife in der Liste wieder vorwaerts */
-				while(badegastAktuell != NULL) {
-					
-					/* Gehoert der Aktuelle Badegast zum jeweiligen Auto wird er aus der Liste entfernt, ansonsten wird die Schleife abgebrochen */
-					/* Das ist wichtig da durch das entfernen des ersten Elements in der Liste die Schleife schon auf einem Gast stehen koennte der nicht zum Auto gehoert */
-					if(badegastAktuell->ankunftsTyp == 1 && badegastAktuell->ankunftsZeit == ankunftsZeit) {
-						
-						/* Lag der Gast gerade auf einer Liege wird die Liege wieder frei */
-						if(badegastAktuell->ereignisTyp == 1) {
-							liegenBelegt--;
-						}
-						badegastFreilassen();
-						badegaesteAktuelleMenge--;
+				/* Anschliessend wird die Liste vorwaerts durchlaufen und geprueft ob alle Mitfahrer schon ihre Ereignisse abgeschlossen haben */
+				/* Alle Mitfahrer bekommen bei willgehen eine 1 zugeordnet damit sie keine neuen Ereignisse anfangen und zeitnah bereit sind zu gehen */
+				/* Ist ein Mitfahrer noch nicht bereit wird mitfahrerBereit auf 1 gesetzt und die anderen müssen warten bis er bereit ist */
+				while(badegastAktuell != NULL && badegastAktuell->ankunftsTyp == 1 && badegastAktuell->ankunftsZeit == ankunftsZeit) {
+					if(badegastAktuell->ereignisTyp != 0) {
+						mitfahrerBereit = 0;
+					}
+					badegastAktuell->willGehen = 1;
+					if(badegastAktuell->danach != NULL && (badegastAktuell->danach)->ankunftsTyp == 1 && (badegastAktuell->danach)->ankunftsZeit == ankunftsZeit) {
+						badegastAktuell = badegastAktuell->danach;
 					}
 					else {
 						break;
 					}
+				}
+				
+				/* Sind alle Mitfahrer eines Autos bereit wird die Abfahrt eingeleitet */
+				if(mitfahrerBereit == 1) {
+					if(autoParkplatz > 0) {
+						autoParkplatz--;
+					}
 					
-					/* Sollte der entfernte Badegast der erste in der Liste gewesen sein, wird kein Element weiter gesprungen da durch das entfernen schon der */
-					/* naechste Badegast ausgewaehlt ist. Ist der Aktuelle Badegast nicht der Anfang wird noch geprueft ob der naechste Badegast zu dem Auto gehoert */
-					if(badegastAktuell != badegastAnfang) {
-						if(badegastAktuell->danach != NULL && (badegastAktuell->danach)->ankunftsTyp == 1 && (badegastAktuell->danach)->ankunftsZeit == ankunftsZeit) {
-							badegastAktuell = badegastAktuell->danach;
+					/* Die Liste wird erneut bis zum ersten Mitfahrer zurückgespult */
+					while(badegastAktuell->davor != NULL && (badegastAktuell->davor)->ankunftsTyp == 1 && (badegastAktuell->davor)->ankunftsZeit == ankunftsZeit) {
+						badegastAktuell = badegastAktuell->davor;
+					}
+					
+					/* Beim ersten Mitfahrer angekommen laeuft die Schleife in der Liste wieder vorwaerts */
+					while(badegastAktuell != NULL) {
+						
+						/* Gehoert der Aktuelle Badegast zum jeweiligen Auto wird er aus der Liste entfernt, ansonsten wird die Schleife abgebrochen */
+						/* Das ist wichtig da durch das entfernen des ersten Elements in der Liste die Schleife schon auf einem Gast stehen koennte der nicht zum Auto gehoert */
+						if(badegastAktuell->ankunftsTyp == 1 && badegastAktuell->ankunftsZeit == ankunftsZeit) {
+							badegastFreilassen();
+							badegaesteAktuelleMenge--;
+						}
+						else {
+							break;
+						}
+						
+						/* Sollte der entfernte Badegast der erste in der Liste gewesen sein, wird kein Element weiter gesprungen da durch das entfernen schon der */
+						/* naechste Badegast ausgewaehlt ist. Ist der Aktuelle Badegast nicht der Anfang wird noch geprueft ob der naechste Badegast zu dem Auto gehoert */
+						if(badegastAktuell != badegastAnfang) {
+							if(badegastAktuell->danach != NULL && (badegastAktuell->danach)->ankunftsTyp == 1 && (badegastAktuell->danach)->ankunftsZeit == ankunftsZeit) {
+								badegastAktuell = badegastAktuell->danach;
+							}
 						}
 					}
 				}
@@ -511,6 +540,7 @@ int badegastHinzufuegen(int simMinute, int ankunftsTyp, int kartenTyp) {
 	badegastAktuell->kartenTyp = kartenTyp;
 	badegastAktuell->ereignisTyp = 0;
 	badegastAktuell->ereignisZeit = 0;
+	badegastAktuell->willGehen = 0;
 	badegastAktuell->davor = badegastEnde;
 	badegastAktuell->danach = NULL;
 	
@@ -590,7 +620,8 @@ void ereignisWahl(int simMinute) {
 				
 				/* Gaeste die mit dem Bus fahren muessen wollen ab 18:30 Uhr kein */
 				/* Ereignis mehr antreten damit sie puenktlich zu ihrem Bus kommen */
-				if(badegastAktuell->ankunftsTyp == 0 && simMinute >= 570) {
+				/* Hat sich ein Gast entschieden zu gehen beginnt er auch kein neues Ereignis */
+				if((badegastAktuell->ankunftsTyp == 0 && simMinute >= 570) || badegastAktuell->willGehen == 1) {
 					return;
 				}
 				else {
@@ -859,12 +890,12 @@ void ausgabeVerarbeitung(int simMinute) {
 	printf("\n1 Stunde verlaengert: %6d", plusEineStunde);
 	printf("\n2 Stunden verlaengert: %5d", plusZweiStunden);
 	printf("%*snormal", 8, "");
-	printf("%*sSchwimmring", 26, "");
+	printf("%*sSchwimmring", 25, "");
 	printf("\nTageskarten: %15d", tagesKarte);
 	printf("%*sauf Treppe: %-3d", 8, "", 0);
-	printf("%*sauf Treppe: %*s%-3d", 17, "", 8, "", 0);
+	printf("%*sauf Treppe: %*s%3d", 16, "", 7, "", 0);
 	printf("\nRutschennutzungen: %9d", 0);
-	printf("%*sRinge im Automaten: %2d", 40, "", 0);
+	printf("%*sRinge im Automaten: %-2d", 39, "", 15);
 	printf("\n\nLiegen: %2d/80", liegenBelegt);
 	printf("%*sBecken", 46, "");
 	printf("\n\n[P]: %-3d", autoParkplatz);
