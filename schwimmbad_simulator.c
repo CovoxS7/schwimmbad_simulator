@@ -1,6 +1,6 @@
 /* Schwimmbadsimulator */
-/* Ein Konsolen Programm dass die */
-/* Tagesauslastung in einem Schwimmbad simuliert */
+/* Ein Konsolen-Programm in ANSI-C, dass das */
+/* Tagesgeschehen in einem Schwimmbad simuliert */
 /* Autor: Hans Kuntsche */
 /* Autor: Soeren Lehmann */
 /* Datum: 12.01.2024 */
@@ -22,6 +22,14 @@
 #define MAX_SCHWIMMERBECKEN	125
 #define MAX_AUSSENBECKEN	175
 #define MAX_LIEGEN			80
+#define MAX_RINGE			15
+#define MIN_NORMAL			22
+#define	MAX_NORMAL			40
+#define MIN_RING_LINKS		20
+#define MAX_RING_LINKS		35
+#define MIN_RING_RECHTS		22
+#define MAX_RING_RECHTS		38
+#define DAUER_TREPPE		60
 
 /* Globale Variablen */
 int badegaesteGesamtMenge = 0;
@@ -41,6 +49,12 @@ int liegenBelegt = 0;
 int kinderbecken = 0;
 int schwimmerbecken = 0;
 int aussenbecken = 0;
+int normalRutschIndex = 0;
+int normalRutschDurchgang = 0;
+int ringRutschIndex = 0;
+int ringRutschDurchgang = 0;
+int ringeImAutomat = 15;
+int ringAusgabeIndex = 0;
 
 int fehler = 0;
 
@@ -53,9 +67,11 @@ typedef struct Badegast{
 	int ereignisTyp;		/* 0 = Frei, 1 = Liege, 2 = Normal, 3 = Ring */
 	int ereignisZeit;
 	int willGehen;
-	/* Weitere Eigenschaften fuer einen Badegast hier eintragen */
-	
-	
+	int rutschIndex;
+	int zeitAufTreppe;
+	int ringJaNein;
+	int zeitAufRutsche;
+
 	struct Badegast *davor;
 	struct Badegast *danach;
 } Badegast;
@@ -64,6 +80,8 @@ typedef struct Badegast{
 Badegast *badegastAnfang = NULL;
 Badegast *badegastEnde = NULL;
 Badegast *badegastAktuell = NULL;
+Badegast *badegastNormalRutsche = NULL;
+Badegast *badegastRingRutsche = NULL;
 
 /* Funktionsdeklarationen */
 void simulation();
@@ -82,15 +100,16 @@ int badegaesteDurchsuchen();
 void badegastFreilassen();
 void ereignisWahl(int simMinute);
 void liegenAblauf();
+void ringAutomat();
+void treppenAufstieg();
+void normalRutsche();
+void ringRutsche();
 void schwimmbeckenWahl();
 int zufallszahl(int maximum);
+int zufallszahlMitMinumum(int minimum, int maximum);
 void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit);
 void ausgabeVerarbeitung(int simMinute);
-
 void fehlerAusgabe();
-
-/* TestFunktion */
-void ereignisAblauf();
 
 /* Hauptfunktion */
 int main(void) {
@@ -127,9 +146,7 @@ void simulation() {
 		
 			/* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 			/* Hier werden die Funktionen aufgerufen die jede Minute ausgefuehrt werden */
-			
-				/* Laesst die Ereignisse ablaufen */
-				ereignisAblauf();
+
 			
 			
 			
@@ -149,12 +166,17 @@ void simulation() {
 				/* oder auf eine Liege oder in einem der Becken bleiben */
 				ereignisWahl(simMinute);
 			
-			
-			
-			
-			
 				/* Laesst die Zeit auf der Liege ablaufen */
 				liegenAblauf();
+				
+				/* Gibt die Ringe fuer die Ringrutsche aus */
+				ringAutomat();
+				
+				/* Bevor die Gaeste rutschen koennen muessen sie die Treppe hoch */
+				treppenAufstieg();
+				
+				normalRutsche();
+				ringRutsche();
 				
 				/* Badegaeste suchen sich ein Schwimmbecken raus */
 				schwimmbeckenWahl();
@@ -541,6 +563,10 @@ int badegastHinzufuegen(int simMinute, int ankunftsTyp, int kartenTyp) {
 	badegastAktuell->ereignisTyp = 0;
 	badegastAktuell->ereignisZeit = 0;
 	badegastAktuell->willGehen = 0;
+	badegastAktuell->rutschIndex = 0;
+	badegastAktuell->zeitAufTreppe = 0;
+	badegastAktuell->ringJaNein = 0;
+	badegastAktuell->zeitAufRutsche = 0;
 	badegastAktuell->davor = badegastEnde;
 	badegastAktuell->danach = NULL;
 	
@@ -607,112 +633,233 @@ void ereignisWahl(int simMinute) {
 	int wahrscheinlichkeit, ereignis;
 	int liegeZeit;
 	
-	/* Ist ueberhaupt ein Element in der Liste */
-	if(badegastAnfang != NULL) {
-		
-		/* Eine halbe Stunde vor Schliessung des Schwimmbads beginnt das Personal die Liegen */
-		/* abzuwischen und nur noch die schon an der Rutsche anstehenden Badegaeste durchzuwinken */
-		if(simMinute <= 630) {
-			badegastAktuell = badegastAnfang;
-	
-			/* Schleife laeuft einmal ueber alle Badegaeste */
-			while(badegastAktuell != NULL) {
-				
-				/* Gaeste die mit dem Bus fahren muessen wollen ab 18:30 Uhr kein */
-				/* Ereignis mehr antreten damit sie puenktlich zu ihrem Bus kommen */
-				/* Hat sich ein Gast entschieden zu gehen beginnt er auch kein neues Ereignis */
-				if((badegastAktuell->ankunftsTyp == 0 && simMinute >= 570) || badegastAktuell->willGehen == 1) {
-					return;
-				}
-				else {
-					/* Wenn der Badegast keinem Ereignis (1,2,3) zugeordnet ist besteht */
-					/* eine Wahrscheinlichkeit von 1/1000 dass er ein Ereignis zugeordnet bekommt */
-					if(badegastAktuell->ereignisTyp == 0) {
-						wahrscheinlichkeit = zufallszahl(1001);
-						
-						/* Hat der Badegast ein Ereignis gezogen wird ermittelt welches Ereignis eintritt */
-						if(wahrscheinlichkeit == 0) {
-							ereignis = zufallszahl(3) + 1;
-						}
-						else {
-							ereignis = 0;
-						}
-						
-						/* Sind alle Liegen belegt kann der Gast keine Liege besetzen */
-						if(ereignis == 1 && liegenBelegt >= MAX_LIEGEN) {
-							return;
-						}
-						
-						/* Ist eine Liege frei wird eine zufaellige Liegedauer */
-						/* 10-30 Minuten(600-1800 Sekunden) bestimmt und zugewiesen */
-						else if(ereignis == 1) {
-							liegeZeit = zufallszahl(1200) + 600;
-							badegastAktuell->ereignisTyp = ereignis;
-							badegastAktuell->ereignisZeit = liegeZeit;
-							liegenBelegt++;
-						}
-						
-						/* Ansonsonsten wird ihm ein Rutschereignis zugeordnet */
-						else {
-							badegastAktuell->ereignisTyp = ereignis;
-							badegastAktuell->ereignisZeit = 10;
-						}
-					}
-				}
-				
-			/* Anschliessend geht die Schleife weiter zum naechsten Gast */
-			badegastAktuell = badegastAktuell->danach;	
-			}
-		}
-	}
-}
-
-/*++++++++++++++++++++++++++++++++++++++++++++++*/
-/* Uebergangsfunktion zum beenden der Ereignisse */
-void ereignisAblauf() {
-	if(badegastAnfang != NULL) {
+	/* Eine halbe Stunde vor Schliessung des Schwimmbads beginnt das Personal die Liegen */
+	/* abzuwischen und nur noch die schon an der Rutsche anstehenden Badegaeste durchzuwinken */
+	if(simMinute <= 630) {
 		badegastAktuell = badegastAnfang;
 
+		/* Schleife laeuft einmal ueber alle Badegaeste */
 		while(badegastAktuell != NULL) {
+			
+			/* Gaeste die mit dem Bus fahren muessen wollen ab 18:30 Uhr kein */
+			/* Ereignis mehr antreten damit sie puenktlich zu ihrem Bus kommen */
+			/* Hat sich ein Gast entschieden zu gehen beginnt er auch kein neues Ereignis */
+			if((badegastAktuell->ankunftsTyp == 0 && simMinute >= 570) || badegastAktuell->willGehen == 1) {
+				return;
+			}
+			else {
+				/* Wenn der Badegast keinem Ereignis (1,2,3) zugeordnet ist besteht */
+				/* eine Wahrscheinlichkeit von 1/1000 dass er ein Ereignis zugeordnet bekommt */
+				if(badegastAktuell->ereignisTyp == 0) {
+					wahrscheinlichkeit = zufallszahl(1001);
 					
-			if(badegastAktuell->ereignisTyp == 2 || badegastAktuell->ereignisTyp == 3) {
-				if(badegastAktuell->ereignisZeit > 0) {
-					badegastAktuell->ereignisZeit -= 1;
-				}
-				else if(badegastAktuell->ereignisZeit == 0) {
-					badegastAktuell->ereignisTyp = 0;
+					/* Hat der Badegast ein Ereignis gezogen wird ermittelt welches Ereignis eintritt */
+					if(wahrscheinlichkeit == 0) {
+						ereignis = zufallszahl(3) + 1;
+					}
+					else {
+						ereignis = 0;
+					}
+					
+					/* Sind alle Liegen belegt kann der Gast keine Liege besetzen */
+					if(ereignis == 1 && liegenBelegt >= MAX_LIEGEN) {
+						return;
+					}
+					
+					/* Ist eine Liege frei wird eine zufaellige Liegedauer */
+					/* 10-30 Minuten(600-1800 Sekunden) bestimmt und zugewiesen */
+					else if(ereignis == 1) {
+						liegeZeit = zufallszahl(1200) + 600;
+						badegastAktuell->ereignisTyp = ereignis;
+						badegastAktuell->ereignisZeit = liegeZeit;
+						liegenBelegt++;
+					}
+					
+					/* Wird die normale Rutsche bestimmt, zieht der Badegast quasi eine Nummer für die normale Rutsche */
+					else if(ereignis == 2) {
+						normalRutschIndex++;
+						badegastAktuell->ereignisTyp = ereignis;
+						badegastAktuell->rutschIndex = normalRutschIndex;
+						badegastAktuell->zeitAufTreppe = DAUER_TREPPE;
+					}
+					
+					/* Wird die Ring Rutsche bestimmt, zieht der Badegast quasi eine Nummer für die Ring Rutsche */
+					else if(ereignis == 3) {
+						ringRutschIndex++;
+						badegastAktuell->ereignisTyp = ereignis;
+						badegastAktuell->rutschIndex = ringRutschIndex;
+						badegastAktuell->zeitAufTreppe = DAUER_TREPPE;
+					}
 				}
 			}
-			badegastAktuell = badegastAktuell->danach;
+			
+		/* Anschliessend geht die Schleife weiter zum naechsten Gast */
+		badegastAktuell = badegastAktuell->danach;	
 		}
 	}
 }
 
 /* Funktion laesst die Gaeste fuer eine bestimmte Zeit auf den Liegen verweilen */
-void liegenAblauf() {
+void liegenAblauf() {	
+	badegastAktuell = badegastAnfang;
 	
-	/* Ist ueberhaupt ein Element in der Liste */
-	if(badegastAnfang != NULL) {
+	/* Schleife laeuft einmal ueber alle Badegaeste */
+	while(badegastAktuell != NULL) {
+		
+		/* Prueft ob der Gast auf einer Liege liegt */
+		if(badegastAktuell->ereignisTyp == 1) {
+			
+			/* Prueft ob er noch verbleibende Liegezeit hat, wenn ja wird eine Sekunde */
+			/* abgezogen wen nicht wird der Ereignistyp wieder auf 0 gesetzt */
+			if(badegastAktuell->ereignisZeit > 0) {
+				badegastAktuell->ereignisZeit -= 1;
+			}
+			else if(badegastAktuell->ereignisZeit == 0) {
+				badegastAktuell->ereignisTyp = 0;
+				liegenBelegt--;
+			}
+		}
+		
+		/* Anschliessend geht die Schleife weiter zum naechsten Gast */
+		badegastAktuell = badegastAktuell->danach;
+	}
+}
+
+/* Funktion gibt die Ringe an die Badegaeste aus */
+void ringAutomat() {
+	
+	/* Es wird geprueft ob mehr Gaeste für die Ringrutsche angemeldet sind */
+	/* als Ringe abgeholt wurden und ob aktuell noch Ringe im Automaten sind */
+	if(ringAusgabeIndex < ringRutschIndex && ringeImAutomat > 0) {
+		
 		badegastAktuell = badegastAnfang;
 		
-		/* Schleife laeuft einmal ueber alle Badegaeste */
+		/* Schleife läuft einmal ueber alle Badegaeste */
 		while(badegastAktuell != NULL) {
 			
-			/* Prueft ob der Gast auf einer Liege liegt */
-			if(badegastAktuell->ereignisTyp == 1) {
-				
-				/* Prueft ob er noch verbleibende Liegezeit hat, wenn ja wird eine Sekunde */
-				/* abgezogen wen nicht wird der Ereignistyp wieder auf 0 gesetzt */
-				if(badegastAktuell->ereignisZeit > 0) {
-					badegastAktuell->ereignisZeit -= 1;
-				}
-				else if(badegastAktuell->ereignisZeit == 0) {
-					badegastAktuell->ereignisTyp = 0;
-					liegenBelegt--;
-				}
+			/* Es wird gepfrueft welcher Badegast als naechstes an in der Reihe am Ringautomaten ist und er bekommt einen Ring */
+			if(badegastAktuell->ereignisTyp == 3 && badegastAktuell->rutschIndex == ringAusgabeIndex + 1) {
+				badegastAktuell->ringJaNein = 1;
 			}
 			
-			/* Anschliessend geht die Schleife weiter zum naechsten Gast */
+			/* Naechster Gast in der Liste */
+			badegastAktuell = badegastAktuell->danach;
+			
+		}
+		
+		/* Abschließend wird der Ring am Automaten abgezogen und der Index erhöht */
+		ringAusgabeIndex++;
+		ringeImAutomat--;
+	}
+}
+
+/* Funktion lässt die Badegaeste die Treppe zur Rutsche aufsteigen */
+void treppenAufstieg() {
+	badegastAktuell = badegastAnfang;
+	
+	/* Schleife läuft einmal ueber alle Badegaeste */
+	while(badegastAktuell != NULL) {
+		
+		/* Ist der Gast auf der Normalen Treppe oder auf der Ringtreppe und hat einen Ring, wird jede Sekunde 1 abgezogen bis 0, erst dann kann der Gast rutschen */
+		if(badegastAktuell->zeitAufTreppe > 0 && (badegastAktuell->ereignisTyp == 2 || (badegastAktuell->ereignisTyp == 3 && badegastAktuell->ringJaNein == 1))) {
+			badegastAktuell->zeitAufTreppe--;
+		}
+		
+		/* Naechster Gast in der Liste */
+		badegastAktuell = badegastAktuell->danach;
+	}
+}
+
+/* Funktion verwaltet den Ablauf der normalen Rutsche */
+void normalRutsche() {
+	int rutschZeit;
+	
+	/* Es wird geprüft ob ein Gast auf der normalen Rutsche sitzt */
+	if(badegastNormalRutsche != NULL) {
+		
+		/* Ist er noch nicht unten angekommen vergeht jeden Durchgang eine Sekunde */
+		if(badegastNormalRutsche->zeitAufRutsche > 0) {
+			badegastNormalRutsche->zeitAufRutsche--;
+		}
+		
+		/* Kommt er unten an wird der Ereignistyp wieder auf 0 gesetzt und die Rutsche wird frei */
+		else {
+			badegastNormalRutsche->ereignisTyp = 0;
+			badegastNormalRutsche = NULL;
+		}
+	}
+	
+	/* Sitzt kein Gast auf der normalen Rutsche wird der nächste in der Reihe gesucht */
+	else {
+		
+		badegastAktuell = badegastAnfang;
+		
+		/* Schleife läuft einmal ueber alle Badegaeste */
+		while(badegastAktuell != NULL) {
+			
+			/* Ueberprueft ob der Gast an der normalen Rutsche steht, ob er als naechstes dran waere und ob er schon die Treppe hoch ist */
+			if(badegastAktuell->ereignisTyp == 2 && badegastAktuell->rutschIndex == normalRutschDurchgang + 1 && badegastAktuell->zeitAufTreppe == 0) {
+				
+				/* Wenn alles zutrifft wird fuer ihn eine Rutschzeit festgelegt, der normalRutschZeiger wird auf ihn gelegt und die Schleife wird abgebrochen */
+				rutschZeit = zufallszahlMitMinumum(MIN_NORMAL, MAX_NORMAL);
+				badegastNormalRutsche = badegastAktuell;
+				badegastNormalRutsche->zeitAufRutsche = rutschZeit;
+				normalRutschDurchgang++;
+				break;
+			}
+			
+			/* Naechster Gast in der Liste */
+			badegastAktuell = badegastAktuell->danach;
+		}
+	}
+}
+
+void ringRutsche() {
+	int rutschZeit;
+	
+	/* Es wird geprüft ob ein Gast auf der Ringrutsche sitzt */
+	if(badegastRingRutsche != NULL) {
+		
+		/* Ist er noch nicht unten angekommen vergeht jeden Durchgang eine Sekunde */
+		if(badegastRingRutsche->zeitAufRutsche > 0) {
+			badegastRingRutsche->zeitAufRutsche--;
+		}
+		
+		/* Kommt er unten an wird der Ereignistyp wieder auf 0 gesetzt und die Rutsche wird frei */
+		else {
+			badegastRingRutsche->ereignisTyp = 0;
+			badegastRingRutsche->ringJaNein = 0;
+			badegastRingRutsche = NULL;
+			ringeImAutomat++;
+		}
+	}
+	
+	/* Sitzt kein Gast auf der Ringrutsche wird der nächste in der Reihe gesucht */
+	else {
+		
+		badegastAktuell = badegastAnfang;
+		
+		/* Schleife läuft einmal ueber alle Badegaeste */
+		while(badegastAktuell != NULL) {
+			
+			/* Ueberprueft ob der Gast an der Ringrutsche steht, ob er als naechstes dran waere und ob er schon die Treppe hoch ist */
+			if(badegastAktuell->ereignisTyp == 3 && badegastAktuell->rutschIndex == ringRutschDurchgang + 1 && badegastAktuell->zeitAufTreppe == 0) {
+				
+				/* Wenn alles zutrifft wird fuer ihn eine Rutschzeit festgelegt, der ringRutschZeiger wird auf ihn gelegt und die Schleife wird abgebrochen */
+				if(ringRutschDurchgang % 2 == 1) {
+					rutschZeit = zufallszahlMitMinumum(MIN_RING_RECHTS, MAX_RING_RECHTS);
+				}
+				
+				else {
+					rutschZeit = zufallszahlMitMinumum(MIN_RING_LINKS, MAX_RING_LINKS);
+				}
+				badegastRingRutsche = badegastAktuell;
+				badegastRingRutsche->zeitAufRutsche = rutschZeit;
+				ringRutschDurchgang++;
+				break;
+			}
+			
+			/* Naechster Gast in der Liste */
 			badegastAktuell = badegastAktuell->danach;
 		}
 	}
@@ -788,6 +935,10 @@ void schwimmbeckenWahl() {
 /* Funktion generiert eine Zufallszahl */
 int zufallszahl(int maximum) {
 	return rand() % maximum;
+}
+
+int zufallszahlMitMinumum(int minimum, int maximum) {
+	return (rand() % (maximum - minimum)) + minimum;
 }
 
 /* Funktion nimmt Eingaben ohne Enter entgegen und verarbeitet sie */
@@ -884,7 +1035,7 @@ void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit) {
 void ausgabeVerarbeitung(int simMinute) {
 	system("cls");
 	
-	printf("Schwimmbad Wasserwesen");
+	printf("Schwimmbad Wasserswesen");
 	printf("\n\n2-Stunden-Karten: %10d", zweiStundenkarte);
 	printf("%*sRutschen", 30, "");
 	printf("\n1 Stunde verlaengert: %6d", plusEineStunde);
@@ -892,10 +1043,11 @@ void ausgabeVerarbeitung(int simMinute) {
 	printf("%*snormal", 8, "");
 	printf("%*sSchwimmring", 25, "");
 	printf("\nTageskarten: %15d", tagesKarte);
-	printf("%*sauf Treppe: %-3d", 8, "", 0);
-	printf("%*sauf Treppe: %*s%3d", 16, "", 7, "", 0);
-	printf("\nRutschennutzungen: %9d", 0);
-	printf("%*sRinge im Automaten: %-2d", 39, "", 15);
+	printf("%*sauf Treppe: %-3d", 8, "", normalRutschIndex - normalRutschDurchgang);
+	printf("%*sauf Treppe: %10d", 16, "", MAX_RINGE - ringeImAutomat);
+	printf("\nRutschennutzungen: %9d", normalRutschDurchgang + ringRutschDurchgang);
+	printf("%*sRinge im Automaten: %2d", 39, "", ringeImAutomat);
+	printf("\n%*sam Automaten: %8d", 67, "", ringRutschIndex - ringAusgabeIndex);
 	printf("\n\nLiegen: %2d/80", liegenBelegt);
 	printf("%*sBecken", 46, "");
 	printf("\n\n[P]: %-3d", autoParkplatz);
