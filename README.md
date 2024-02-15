@@ -57,6 +57,6 @@ Badegäste rutschen.
 - ß wird zu ss
 - Keine Leerzeichen zwischen Aufruf und Argumenten bspw.: main(), if(), ...
 - Immer Leerzeichen zwischen Argumenten und Codeblock bspw.: main() {}, if() {}, ...
-- Anweisung immer in geschweiften Klammer außer wenn Aufruf und Anweisung auf 
-  einer Zeile stehen bspw.: if() Anweisung;
+- Anweisung immer in geschweiften Klammer
+- Außer wenn Aufruf und Anweisung auf einer Zeile stehen bspw.: if() Anweisung;
 - Kommentieren, kommentieren, kommentieren
