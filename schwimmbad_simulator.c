@@ -13,34 +13,34 @@
 #include <windows.h>
 
 /* Konstanten */
-#define MAX_AUSLASTUNG		350
-#define MAX_BUS				50
-#define MAX_AUTO			5
-#define MAX_PARKPLATZ		30
-#define MAX_FUSSGAENGER		55
-#define MAX_KINDERBECKEN	50
-#define MAX_SCHWIMMERBECKEN	125
-#define MAX_AUSSENBECKEN	175
-#define MAX_LIEGEN			80
-#define MAX_RINGE			15
-#define MIN_NORMAL			22
-#define	MAX_NORMAL			40
-#define MIN_RING_LINKS		20
-#define MAX_RING_LINKS		35
-#define MIN_RING_RECHTS		22
-#define MAX_RING_RECHTS		38
-#define DAUER_TREPPE		60
+#define MAX_AUSLASTUNG				350
+#define MAX_BUS						50
+#define MAX_AUTO					5
+#define MAX_PARKPLATZ				30
+#define MAX_FUSSGAENGER				55
+#define MAX_KINDERBECKEN			50
+#define MAX_SCHWIMMERBECKEN			125
+#define MAX_AUSSENBECKEN			175
+#define MAX_LIEGEN					80
+#define MAX_RINGE					15
+#define MIN_NORMAL					22
+#define	MAX_NORMAL					40
+#define MIN_RING_LINKS				20
+#define MAX_RING_LINKS				35
+#define MIN_RING_RECHTS				22
+#define MAX_RING_RECHTS				38
+#define DAUER_TREPPE				60
 
 /* Globale Variablen */
 int badegaesteGesamtMenge = 0;
 int badegaesteAktuelleMenge = 0;
-int busZustand = 0;
-int busFahrgaeste = 0;
-int busHaltestelle = 0;
-int autoBelegung = 0;
-int autoParkplatz = 0;
-int fussgaengerJa = 0;
-int fussgaengerGesamt = 0;
+int busZustand = 0;					/* Wo befindet sich der Bus */
+int busFahrgaeste = 0;				/* Wieviele Gaeste sitzen im aktuellen Bus */
+int busHaltestelle = 0;				/* Wieviele Gaeste stehen an der Haltestelle */
+int autoBelegung = 0;				/* Wieviele Gaeste sitzen im aktuell ankommenden Auto */
+int autoParkplatz = 0;				/* Wieviele Parkplätze sind belegt */
+int fussgaengerJa = 0;				/* Kommt aktuell ein Fussgaenger */
+int fussgaengerGesamt = 0;			/* Wieviele Gaeste kamen schon zu Fuss */
 int zweiStundenkarte = 0;
 int plusEineStunde = 0;
 int plusZweiStunden = 0;
@@ -49,25 +49,23 @@ int liegenBelegt = 0;
 int kinderbecken = 0;
 int schwimmerbecken = 0;
 int aussenbecken = 0;
-int normalRutschIndex = 0;
-int normalRutschDurchgang = 0;
-int ringRutschIndex = 0;
-int ringRutschDurchgang = 0;
+int normalRutschIndex = 0;			/* Wird benoetigt um den Gaesten eine Position in der normalen Rutschlange zuzuweisen */
+int normalRutschDurchgang = 0;		/* Ist die aktuelle Position auf der normalen Rutsche */
+int ringRutschIndex = 0;			/* Wird benoetigt um den Gaesten eine Position in der Ringrutschlange zuzuweisen */
+int ringRutschDurchgang = 0;		/* Ist die aktuelle Position auf der Ringrutsche */
+int ringAusgabeIndex = 0;			/* Wird benoetigt um den Gaesten eine Position am Ringautomat zuzuweisen */
 int ringeImAutomat = 15;
-int ringAusgabeIndex = 0;
-
-int fehler = 0;
+int fehler = 0;						/* Für Fehlerausgabe, siehe fehlerAusgabe-Funktion */
 
 /* Struktur fuer einen Badegast */
 typedef struct Badegast{
-	int index;
 	int ankunftsZeit;
-	int ankunftsTyp;		/* 0 = Bus, 1 = Auto, 2 = Fussgaenger */
-	int kartenTyp;			/* 120 = 2h, 180 = 1h verl., 240 = 2h verl., 300 = Tageskarte */
-	int ereignisTyp;		/* 0 = Frei, 1 = Liege, 2 = Normal, 3 = Ring */
-	int ereignisZeit;
-	int willGehen;
-	int rutschIndex;
+	int ankunftsTyp;				/* 0 = Bus, 1 = Auto, 2 = Fussgaenger */
+	int kartenTyp;					/* 120 = 2h, 180 = 1h verl., 240 = 2h verl., 300 = Tageskarte */
+	int ereignisTyp;				/* 0 = Frei, 1 = Liege, 2 = Normal, 3 = Ring */
+	int ereignisZeit;				/* Zeit auf den Liegen */
+	int willGehen;					/* Fuer Gaeste die mit dem gleichen Auto kamen */
+	int rutschIndex;				/* Position in der Rutschschlange */
 	int zeitAufTreppe;
 	int ringJaNein;
 	int zeitAufRutsche;
@@ -90,7 +88,7 @@ void busAnreise(int simMinute);
 void autoAnreise(int simMinute);
 void zuFussAnreise(int simMinute);
 void badegaesteEinlass(int simMinute);
-int eintrittskarteKaufen(int menge);
+int eintrittskarteKaufen(int simMinute, int menge);
 void eintrittskarteVerlaengern(int simMinute);
 int gehenOderBleiben(int simMinute);
 void abreise(int simMinute);
@@ -106,7 +104,7 @@ void normalRutsche();
 void ringRutsche();
 void schwimmbeckenWahl();
 int zufallszahl(int maximum);
-int zufallszahlMitMinumum(int minimum, int maximum);
+int zufallszahlMinMax(int minimum, int maximum);
 void eingabeVerarbeitung(int simMinute, int *simGeschwindigkeit);
 void ausgabeVerarbeitung(int simMinute);
 void fehlerAusgabe();
@@ -120,7 +118,7 @@ int main(void) {
 
 /* Funktion verwaltet den zeitlichen Ablauf der Simulation */
 void simulation() {
-	int simZeit = (11 * 60) + 1;	/* (10h oeffnungszeit + 1h Vorlauf) * 60min + 1min um auf 20:00 zu kommen */
+	int simZeit = (11 * 60) + 1;		/* (10h oeffnungszeit + 1h Vorlauf) * 60min + 1min um auf 20:00 zu kommen */
 	int simGeschwindigkeit = 1000;
 	int simMinute; 
 	int simSekunde;
@@ -128,8 +126,8 @@ void simulation() {
 	/* Schleifeninhalt wird jede simulierte Minute aufgerufen (entsprechend 1 Realsekunde) */
 	/* simMinute = 50 laesst die Simulation 09:50 starten fuer den ersten Bus */
 	for(simMinute = 50; simMinute < simZeit; simMinute++) {
-				
-		/* Ruft die anreise-Funktion auf */
+		
+		/* Ruft die anreise-Funktion auf (Muss vor Oeffnung des Schwimmbads erfolgen */
 		anreise(simMinute);
 			
 		/* Funktionen ab oeffnung des Schwimmbads */
@@ -143,25 +141,10 @@ void simulation() {
 			
 			/* Prueft ob ein Gast seine Eintrittskarte verlaengern muss */
 			eintrittskarteVerlaengern(simMinute);
-		
-			/* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
-			/* Hier werden die Funktionen aufgerufen die jede Minute ausgefuehrt werden */
-
-			
-			
-			
-			
-			
-			
-			
-			
-			/* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 			
 			/* Schleifeninhalt wird jede simulierte Sekunde aufgerufen (entsprechen 1/60 Realsekunden) */
 			for(simSekunde = 0; simSekunde < 60; simSekunde++) {
-				/* ------------------------------------------------------------------------ */
-				/* Hier werden die Funktionen aufgerufen die jede Sekunde ausgefuehrt werden */
-			
+
 				/* Badegaeste entscheiden zufaellig ob sie Rutschen gehen */
 				/* oder auf eine Liege oder in einem der Becken bleiben */
 				ereignisWahl(simMinute);
@@ -175,16 +158,17 @@ void simulation() {
 				/* Bevor die Gaeste rutschen koennen muessen sie die Treppe hoch */
 				treppenAufstieg();
 				
+				/* Hier werden die Rutschdurchgaenge simuliert */
 				normalRutsche();
 				ringRutsche();
 				
-				/* Badegaeste suchen sich ein Schwimmbecken raus */
+				/* Alle uebrigen Badegaeste verteilen sich auf die Schwimmbecken */
 				schwimmbeckenWahl();
-				/* ------------------------------------------------------------------------ */
 			}
 		}
 		
-		/* Kuemmert sich um die Verwaltung der Bushaltestelle */
+		/* Kuemmert sich um die Verwaltung der Bushaltestelle, Muss zur Anzeige */
+		/* der Position vom Bus, auch auserhalb der Oeffnungszeiten aufgerufen werden */
 		busHaltestellenVerwaltung(simMinute);
 
 		/* Eingabeverarbeitung */
@@ -193,7 +177,7 @@ void simulation() {
 		/* Anzeigen der Ergebnisse */
 		ausgabeVerarbeitung(simMinute);
 		
-		/* Im Falle eines Fehlers wird eine Ausgabe erzeugt */
+		/* Im Falle eines Fehlers wird eine Fehlerausgabe erzeugt */
 		fehlerAusgabe();
 		
 		/* Steuert die Simulationsgeschwindigkeit */
@@ -245,13 +229,13 @@ void anreise(int simMinute) {
 void busAnreise(int simMinute) {
 	/* Je nach Uhrzeit bringt der Bus mehr oder weniger Gaeste */
 	/* Maximal 50 in den Zeiten von 11:00 Uhr und 16:00 Uhr */
-	if(simMinute < 60) busFahrgaeste = zufallszahl(10) + 10;
+	if(simMinute < 60) busFahrgaeste = zufallszahl(10) + 20;
 	if(simMinute >= 60 && simMinute < 90) busFahrgaeste = zufallszahl(10) + 20;
 	if(simMinute >= 90 && simMinute < 120) busFahrgaeste = zufallszahl(10) + 30;
-	if(simMinute >= 120 && simMinute < 420) busFahrgaeste = zufallszahl(10) + 40;
-	if(simMinute >= 420 && simMinute < 450) busFahrgaeste = zufallszahl(10) + 30;
-	if(simMinute >= 450 && simMinute < 480) busFahrgaeste = zufallszahl(10) + 20;
-	if(simMinute >= 480 && simMinute < 510) busFahrgaeste = zufallszahl(10) + 10;
+	if(simMinute >= 120 && simMinute < 450) busFahrgaeste = zufallszahl(10) + 40;
+	if(simMinute >= 450 && simMinute < 480) busFahrgaeste = zufallszahl(10) + 30;
+	if(simMinute >= 480 && simMinute < 510) busFahrgaeste = zufallszahl(10) + 20;
+	if(simMinute >= 510 && simMinute < 540) busFahrgaeste = zufallszahl(10) + 10;
 }
 
 /* Funktion zur Generierung der Anzahl der im Auto anreisenden Badegaeste */
@@ -260,16 +244,16 @@ void autoAnreise(int simMinute){
 	/* Maximal 5 in den Zeiten von 11:00 Uhr und 16:00 Uhr */
 	if(simMinute >= 60 && simMinute < 90) autoBelegung = zufallszahl(1) + 2;
 	if(simMinute >= 90 && simMinute < 120) autoBelegung = zufallszahl(1) + 3;
-	if(simMinute >= 120 && simMinute < 420) autoBelegung = zufallszahl(1) + 4;
-	if(simMinute >= 420 && simMinute < 450) autoBelegung = zufallszahl(1) + 3;
-	if(simMinute >= 450 && simMinute < 480) autoBelegung = zufallszahl(1) + 2;
-	if(simMinute >= 480 && simMinute < 570) autoBelegung = zufallszahl(1) + 1;
+	if(simMinute >= 120 && simMinute < 450) autoBelegung = zufallszahl(1) + 4;
+	if(simMinute >= 450 && simMinute < 480) autoBelegung = zufallszahl(1) + 3;
+	if(simMinute >= 480 && simMinute < 510) autoBelegung = zufallszahl(1) + 2;
+	if(simMinute >= 510 && simMinute < 600) autoBelegung = zufallszahl(1) + 1;
 }
 
 /* Funktion der zu Fuss anreisenden Badegaeste */
 void zuFussAnreise(int simMinute){
 	/* Fussgaenger kommen je nach belieben */
-	if(simMinute < 570) {
+	if(simMinute < 600) {
 		fussgaengerJa++;
 		fussgaengerGesamt++;
 	}
@@ -284,14 +268,14 @@ void badegaesteEinlass(int simMinute) {
 	
 	/* Busgaeste erhalten Anreisetyp 0 */
 	for(; busFahrgaeste > 0; busFahrgaeste--) {
-		kartenTyp = eintrittskarteKaufen(1);
+		kartenTyp = eintrittskarteKaufen(simMinute, 1);
 		badegastHinzufuegen(simMinute, 0, kartenTyp);
 	}
 	
 	/* Kommen Badegaeste mit dem Auto wird ein Parkplatz belegt, */
 	/* alle erhalten die gleiche Karte und Anreisetyp 1 */
 	if(autoBelegung > 0) {
-		kartenTyp = eintrittskarteKaufen(autoBelegung);
+		kartenTyp = eintrittskarteKaufen(simMinute, autoBelegung);
 		autoParkplatz++;
 		for(; autoBelegung > 0; autoBelegung--) {
 			badegastHinzufuegen(simMinute, 1, kartenTyp);
@@ -300,27 +284,38 @@ void badegaesteEinlass(int simMinute) {
 	
 	/* Fussgaenger erhalten den Anreisetyp 2 */
 	for(; fussgaengerJa > 0; fussgaengerJa--) {
-		kartenTyp = eintrittskarteKaufen(1);
+		kartenTyp = eintrittskarteKaufen(simMinute, 1);
 		badegastHinzufuegen(simMinute, 2, kartenTyp);
 	}
 }
 
 /* Funktion ermittelt welche Eintrittskarte die Gaeste kaufen */
-int eintrittskarteKaufen(int menge) {
+int eintrittskarteKaufen(int simMinute, int menge) {
 	int wahrscheinlichkeit;
 	
-	/* Es besteht eine Wahrscheinlichkeit von 1:5 fuer Tageskarte/2H-Karte */
-	wahrscheinlichkeit = zufallszahl(6);
-	/* Tageskarten haben den Wert 300 zugeordnet */
-	if(wahrscheinlichkeit == 0) {
-		tagesKarte += menge;
-		return 300;
+	/* Bis 16:00 Uhr ist es zufällig welche Karte gekauft wird */
+	if(simMinute <= 420) {
+			
+		/* Es besteht eine Wahrscheinlichkeit von 1:5 fuer Tageskarte/2H-Karte */
+		wahrscheinlichkeit = zufallszahl(6);
+		/* Tageskarten haben den Wert 300 zugeordnet */
+		if(wahrscheinlichkeit == 0) {
+			tagesKarte += menge;
+			return 300;
+		}
+		/* 2H-Karten haben den Wert 120 zugeordnet */
+		else {
+			zweiStundenkarte += menge;
+			return 120;
+		}
 	}
-	/* 2H-Karten haben den Wert 120 zugeordnet */
+	
+	/* Ab 16:00 Uhr kauft kein Gast mehr eine Tageskarte */
 	else {
 		zweiStundenkarte += menge;
 		return 120;
 	}
+
 }
 
 /* Funktion sorgt dafuer das alle Gaeste die laenger bleiben als ihre Karte gueltig ist, ihre Karte verlaengern */
@@ -409,6 +404,8 @@ int gehenOderBleiben(int simMinute) {
 			entscheidung = (wahrscheinlichkeit > vergleichswert) ? 1 : 0;
 		}
 	}
+	
+	/* Tritt keiner der Faelle ein bleibt der Badegast */
 	else {
 		entscheidung = 0;
 	}
@@ -451,12 +448,14 @@ void abreise(int simMinute) {
 				
 				/* Anschliessend wird die Liste vorwaerts durchlaufen und geprueft ob alle Mitfahrer schon ihre Ereignisse abgeschlossen haben */
 				/* Alle Mitfahrer bekommen bei willgehen eine 1 zugeordnet damit sie keine neuen Ereignisse anfangen und zeitnah bereit sind zu gehen */
-				/* Ist ein Mitfahrer noch nicht bereit wird mitfahrerBereit auf 1 gesetzt und die anderen müssen warten bis er bereit ist */
+				/* Ist ein Mitfahrer noch nicht bereit wird mitfahrerBereit auf 0 gesetzt und die anderen müssen warten bis er bereit ist */
 				while(badegastAktuell != NULL && badegastAktuell->ankunftsTyp == 1 && badegastAktuell->ankunftsZeit == ankunftsZeit) {
 					if(badegastAktuell->ereignisTyp != 0) {
 						mitfahrerBereit = 0;
 					}
 					badegastAktuell->willGehen = 1;
+					
+					/* Anschließend wird geprueft ob nach ihm in der Liste ein weiterer Mitfahrer ist und weiter gegangen oder wenn nicht Schleife abgebrochen */
 					if(badegastAktuell->danach != NULL && (badegastAktuell->danach)->ankunftsTyp == 1 && (badegastAktuell->danach)->ankunftsZeit == ankunftsZeit) {
 						badegastAktuell = badegastAktuell->danach;
 					}
@@ -541,12 +540,12 @@ void busHaltestellenVerwaltung(int simMinute) {
 	}
 }
 
-/* Funktion fuegt die eingelassenen Badegï¿½ste zur Liste der Badegaeste hinzu */
+/* Funktion fuegt die eingelassenen Badegaeste zur Liste der Badegaeste hinzu */
 int badegastHinzufuegen(int simMinute, int ankunftsTyp, int kartenTyp) {
 	
 	/* Reserviert Speicher fuer einen neuen Badegasteintrag */
 	if(!(badegastAktuell = (Badegast* ) malloc(sizeof(Badegast)))) {
-		/* Hier folgt die Fehlerbehandlung */
+		/* Sollte kein Speicher Reserviert werden können wird ein fehler angezeigt */
 		fehler = 2;
 		return 0;
 	}
@@ -556,7 +555,6 @@ int badegastHinzufuegen(int simMinute, int ankunftsTyp, int kartenTyp) {
 	badegaesteAktuelleMenge++;
 	
 	/* Uebergibt die Startwerte dem Badegasteintrag */
-	badegastAktuell->index = badegaesteGesamtMenge;
 	badegastAktuell->ankunftsZeit = simMinute;
 	badegastAktuell->ankunftsTyp = ankunftsTyp;
 	badegastAktuell->kartenTyp = kartenTyp;
@@ -648,7 +646,7 @@ void ereignisWahl(int simMinute) {
 				return;
 			}
 			else {
-				/* Wenn der Badegast keinem Ereignis (1,2,3) zugeordnet ist besteht */
+				/* Wenn der Badegast keinem Ereignis (1,2,3) zugeordnet ist besteht besteht in dieser Sekunde */
 				/* eine Wahrscheinlichkeit von 1/1000 dass er ein Ereignis zugeordnet bekommt */
 				if(badegastAktuell->ereignisTyp == 0) {
 					wahrscheinlichkeit = zufallszahl(1001);
@@ -777,7 +775,7 @@ void normalRutsche() {
 	/* Es wird geprüft ob ein Gast auf der normalen Rutsche sitzt */
 	if(badegastNormalRutsche != NULL) {
 		
-		/* Ist er noch nicht unten angekommen vergeht jeden Durchgang eine Sekunde */
+		/* Ist er noch nicht unten angekommen vergeht jeden Durchlauf eine Sekunde */
 		if(badegastNormalRutsche->zeitAufRutsche > 0) {
 			badegastNormalRutsche->zeitAufRutsche--;
 		}
@@ -800,8 +798,8 @@ void normalRutsche() {
 			/* Ueberprueft ob der Gast an der normalen Rutsche steht, ob er als naechstes dran waere und ob er schon die Treppe hoch ist */
 			if(badegastAktuell->ereignisTyp == 2 && badegastAktuell->rutschIndex == normalRutschDurchgang + 1 && badegastAktuell->zeitAufTreppe == 0) {
 				
-				/* Wenn alles zutrifft wird fuer ihn eine Rutschzeit festgelegt, der normalRutschZeiger wird auf ihn gelegt und die Schleife wird abgebrochen */
-				rutschZeit = zufallszahlMitMinumum(MIN_NORMAL, MAX_NORMAL);
+				/* Es wird eine Rutschzeit festgelegt, der normalRutschZeiger wird auf den Gast gelegt und die Schleife wird abgebrochen */
+				rutschZeit = zufallszahlMinMax(MIN_NORMAL, MAX_NORMAL);
 				badegastNormalRutsche = badegastAktuell;
 				badegastNormalRutsche->zeitAufRutsche = rutschZeit;
 				normalRutschDurchgang++;
@@ -814,18 +812,19 @@ void normalRutsche() {
 	}
 }
 
+/* Funktion verwaltet den Ablauf der Ringrutsche */
 void ringRutsche() {
 	int rutschZeit;
 	
 	/* Es wird geprüft ob ein Gast auf der Ringrutsche sitzt */
 	if(badegastRingRutsche != NULL) {
 		
-		/* Ist er noch nicht unten angekommen vergeht jeden Durchgang eine Sekunde */
+		/* Ist er noch nicht unten angekommen vergeht jeden Durchlauf eine Sekunde */
 		if(badegastRingRutsche->zeitAufRutsche > 0) {
 			badegastRingRutsche->zeitAufRutsche--;
 		}
 		
-		/* Kommt er unten an wird der Ereignistyp wieder auf 0 gesetzt und die Rutsche wird frei */
+		/* Kommt er unten an wird der Ereignistyp wieder auf 0 gesetzt, der Ring wird abgegeben und die Rutsche wird frei */
 		else {
 			badegastRingRutsche->ereignisTyp = 0;
 			badegastRingRutsche->ringJaNein = 0;
@@ -843,16 +842,21 @@ void ringRutsche() {
 		while(badegastAktuell != NULL) {
 			
 			/* Ueberprueft ob der Gast an der Ringrutsche steht, ob er als naechstes dran waere und ob er schon die Treppe hoch ist */
+			/* Da er nur mit einem Ring auf die Treppe kommt, muss nicht erst ueberprueft werden ob er einen Ring hat */
 			if(badegastAktuell->ereignisTyp == 3 && badegastAktuell->rutschIndex == ringRutschDurchgang + 1 && badegastAktuell->zeitAufTreppe == 0) {
-				
-				/* Wenn alles zutrifft wird fuer ihn eine Rutschzeit festgelegt, der ringRutschZeiger wird auf ihn gelegt und die Schleife wird abgebrochen */
+
+				/* Hier wird die Weiche der Ringrutsche simuliert */
+				/* Ist der Durchgang ungerade wird die rechte Seite ausgewählt */
 				if(ringRutschDurchgang % 2 == 1) {
-					rutschZeit = zufallszahlMitMinumum(MIN_RING_RECHTS, MAX_RING_RECHTS);
+					rutschZeit = zufallszahlMinMax(MIN_RING_RECHTS, MAX_RING_RECHTS);
 				}
 				
+				/* Ist der Durchgang gerade wird die linke Seite ausgewählt */
 				else {
-					rutschZeit = zufallszahlMitMinumum(MIN_RING_LINKS, MAX_RING_LINKS);
+					rutschZeit = zufallszahlMinMax(MIN_RING_LINKS, MAX_RING_LINKS);
 				}
+				
+				/* der ringRutschZeiger wird auf den Gast gesetzt, die Rutschzeit wird übergeben und die Schleife abgebrochen */
 				badegastRingRutsche = badegastAktuell;
 				badegastRingRutsche->zeitAufRutsche = rutschZeit;
 				ringRutschDurchgang++;
@@ -937,7 +941,8 @@ int zufallszahl(int maximum) {
 	return rand() % maximum;
 }
 
-int zufallszahlMitMinumum(int minimum, int maximum) {
+/* Funktion generiert eine Zufallszahl in einem bestimmten Bereich */
+int zufallszahlMinMax(int minimum, int maximum) {
 	return (rand() % (maximum - minimum)) + minimum;
 }
 
@@ -1046,8 +1051,8 @@ void ausgabeVerarbeitung(int simMinute) {
 	printf("%*sauf Treppe: %-3d", 8, "", normalRutschIndex - normalRutschDurchgang);
 	printf("%*sauf Treppe: %10d", 16, "", MAX_RINGE - ringeImAutomat);
 	printf("\nRutschennutzungen: %9d", normalRutschDurchgang + ringRutschDurchgang);
-	printf("%*sRinge im Automaten: %2d", 39, "", ringeImAutomat);
-	printf("\n%*sam Automaten: %8d", 67, "", ringRutschIndex - ringAusgabeIndex);
+	printf("%*sRinge im Automat: %4d", 39, "", ringeImAutomat);
+	printf("\n%*sam Automat: %10d", 67, "", ringRutschIndex - ringAusgabeIndex);
 	printf("\n\nLiegen: %2d/80", liegenBelegt);
 	printf("%*sBecken", 46, "");
 	printf("\n\n[P]: %-3d", autoParkplatz);
